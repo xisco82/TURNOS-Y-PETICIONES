@@ -17,6 +17,8 @@ import { api } from './services/api';
 import { User } from './types';
 import { Shield, Clock, HelpCircle, Heart } from 'lucide-react';
 import { APP_BRAND } from './constants/branding';
+import { LogoModalProvider } from './context/LogoModalContext';
+import { InteractiveLogo } from './components/InteractiveLogo';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -53,15 +55,8 @@ function AppContent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
         <div className="text-center space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 shadow-md mx-auto flex items-center justify-center overflow-hidden">
-            <img
-              src={APP_BRAND.logoUrl}
-              alt={APP_BRAND.name}
-              className="w-full h-full object-contain"
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).src = APP_BRAND.localLogoUrl;
-              }}
-            />
+          <div className="flex justify-center">
+            <InteractiveLogo size="lg" />
           </div>
           <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Iniciando {APP_BRAND.name}...</p>
@@ -122,16 +117,7 @@ function AppContent() {
       <footer className="border-t border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm py-4 text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-3 text-center md:text-left">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1 flex items-center justify-center overflow-hidden shadow-xs shrink-0">
-              <img
-                src={APP_BRAND.logoUrl}
-                alt={APP_BRAND.name}
-                className="w-full h-full object-contain"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src = APP_BRAND.localLogoUrl;
-                }}
-              />
-            </div>
+            <InteractiveLogo size="sm" />
             <div>
               <div className="flex items-center gap-2 flex-wrap justify-center md:justify-start">
                 <span className="font-bold text-slate-800 dark:text-slate-200">{APP_BRAND.name}</span>
@@ -193,8 +179,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <LogoModalProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </LogoModalProvider>
   );
 }

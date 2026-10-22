@@ -17,6 +17,7 @@ import { PWAInstallButton } from './PWAInstallButton';
 import { NotificationItem } from '../types';
 import { api } from '../services/api';
 import { APP_BRAND } from '../constants/branding';
+import { InteractiveLogo } from './InteractiveLogo';
 
 interface HeaderProps {
   activeTab: string;
@@ -89,16 +90,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center justify-between h-16">
           {/* Logo & Brand */}
           <div className="flex items-center gap-3">
-            <div className="relative w-11 h-11 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1 shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
-              <img
-                src={APP_BRAND.logoUrl}
-                alt={APP_BRAND.name}
-                className="w-full h-full object-contain"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src = APP_BRAND.localLogoUrl;
-                }}
-              />
-            </div>
+            <InteractiveLogo size="md" />
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-bold text-lg text-slate-900 dark:text-white tracking-tight">{APP_BRAND.name}</span>

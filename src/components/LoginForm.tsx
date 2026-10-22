@@ -3,6 +3,7 @@ import { CalendarDays, KeyRound, Mail, LogIn, AlertCircle, Users } from 'lucide-
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
 import { APP_BRAND } from '../constants/branding';
+import { InteractiveLogo } from './InteractiveLogo';
 
 export const LoginForm: React.FC = () => {
   const { login, quickUsers, switchUser } = useAuth();
@@ -29,15 +30,8 @@ export const LoginForm: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center p-4 bg-slate-100 dark:bg-slate-950">
       <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 p-8 space-y-6">
         <div className="text-center space-y-2">
-          <div className="w-20 h-20 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2 shadow-lg mx-auto flex items-center justify-center overflow-hidden">
-            <img
-              src={APP_BRAND.logoUrl}
-              alt={APP_BRAND.name}
-              className="w-full h-full object-contain"
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).src = APP_BRAND.localLogoUrl;
-              }}
-            />
+          <div className="flex justify-center">
+            <InteractiveLogo size="xl" />
           </div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{APP_BRAND.name}</h1>
           <p className="text-xs text-slate-500">{APP_BRAND.subtitle}</p>
