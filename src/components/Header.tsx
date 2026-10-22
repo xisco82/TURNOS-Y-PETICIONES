@@ -214,11 +214,6 @@ export const Header: React.FC<HeaderProps> = ({
                   <div className="px-2 py-2 border-b border-slate-100 dark:border-slate-800">
                     <p className="text-xs font-bold text-slate-900 dark:text-white">{user?.name}</p>
                     <p className="text-[11px] text-slate-500 truncate">{user?.email}</p>
-                    {user?.tempPassword && (
-                      <p className="text-[10px] font-mono mt-1 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded inline-block">
-                        Contraseña actual: {user.tempPassword}
-                      </p>
-                    )}
                   </div>
 
                   {/* Actions */}

@@ -457,6 +457,73 @@ app.post('/api/auth/change-password', authMiddleware, (req: AuthRequest, res) =>
   res.json({ success: true, message: 'Contraseña actualizada correctamente' });
 });
 
+app.post('/api/auth/register-employee', (req, res) => {
+  const { name, email, phone } = req.body;
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'El nombre completo es obligatorio' });
+  }
+  if (!email || !email.trim()) {
+    return res.status(400).json({ error: 'El correo electrónico es obligatorio' });
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const existing = db.users.find(u => u.email.toLowerCase() === cleanEmail && u.status !== 'deleted');
+  if (existing) {
+    return res.status(400).json({ error: 'Ya existe una cuenta con este correo electrónico' });
+  }
+
+  const tempPassword = `emp${Math.floor(1000 + Math.random() * 9000)}`;
+  const cleanName = name.trim();
+  const firstName = cleanName.split(' ')[0];
+  const cleanAliases = [firstName, cleanName];
+
+  const newUser: User = {
+    id: `emp-${Date.now()}`,
+    name: cleanName,
+    aliases: cleanAliases,
+    email: cleanEmail,
+    phone: phone?.trim() || '',
+    role: 'employee',
+    status: 'active',
+    tempPassword,
+    mustChangePassword: true,
+    createdAt: new Date().toISOString(),
+  };
+
+  db.users.push(newUser);
+  saveDatabase();
+
+  addAuditLog(
+    newUser.id,
+    newUser.name,
+    `Auto-registro de empleado: ${newUser.name} (${cleanEmail})`,
+    'empleado'
+  );
+
+  // Send simulated welcome email with credentials
+  const emailEntry = {
+    id: `email-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+    to: cleanEmail,
+    subject: `Bienvenido a Hotel HM Gran Fiesta - Tus credenciales de acceso`,
+    body: `Hola ${newUser.name},\n\nSe ha creado tu cuenta de empleado en Hotel HM Gran Fiesta.\n\nTus datos de acceso son:\n- Correo: ${cleanEmail}\n- Contraseña inicial: ${tempPassword}\n\nPor favor, accede a la aplicación y personaliza tu contraseña.\n\nAtentamente,\nHotel HM Gran Fiesta`,
+    date: new Date().toISOString(),
+  };
+  db.sentEmails.unshift(emailEntry);
+
+  sendNotification(
+    'admin-1',
+    'Nuevo empleado registrado',
+    `${newUser.name} se ha registrado con el correo ${cleanEmail}.`,
+    'request_created'
+  );
+
+  res.status(201).json({
+    user: newUser,
+    tempPassword,
+    token: newUser.id,
+  });
+});
+
 // Quick switch / demo user list for evaluation
 app.get('/api/auth/quick-users', (_req, res) => {
   const activeUsers = db.users
@@ -470,6 +537,21 @@ app.get('/api/auth/quick-users', (_req, res) => {
       tempPassword: u.tempPassword,
     }));
   res.json(activeUsers);
+});
+
+// Database status & connectivity verification
+app.get('/api/db/status', (_req, res) => {
+  res.json({
+    status: 'connected',
+    timestamp: new Date().toISOString(),
+    usersCount: db.users.filter(u => u.status !== 'deleted').length,
+    schedulesCount: db.schedules.length,
+    requestsCount: db.shiftRequests.length + db.daysOffRequests.length + db.absenceRequests.length,
+    incidentsCount: db.incidents.length,
+    auditLogsCount: db.auditLogs.length,
+    firestoreProjectId: 'peticiones-y-turnos',
+    firestoreDatabaseId: 'ai-studio-gestindeturnosys-bc2b5f6a-0c49-4f97-a8be-66476272473a',
+  });
 });
 
 // 2. Users (Employee Management)

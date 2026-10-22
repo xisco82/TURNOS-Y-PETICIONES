@@ -201,7 +201,17 @@
   "daysOffRequests": [],
   "absenceRequests": [],
   "incidents": [],
-  "notifications": [],
+  "notifications": [
+    {
+      "id": "notif-1792666618188-z9fbu",
+      "userId": "admin-1",
+      "title": "Nuevo empleado registrado",
+      "message": "Marta Soler Test se ha registrado con el correo marta.soler.test@empresa.com.",
+      "type": "request_created",
+      "read": false,
+      "createdAt": "2026-10-22T10:56:58.188Z"
+    }
+  ],
   "auditLogs": [
     {
       "id": "log-init",
@@ -225,7 +235,13 @@
     "timezone": "Europe/Madrid",
     "emailSenderDomain": "empresa.com"
   },
-  "sentEmails": []
+  "sentEmails": [
+    {
+      "id": "email-1792666618188-2r5am",
+      "to": "xiscoquin@gmail.com",
+      "subject": "Novedad en Hotel HM Gran Fiesta: Nuevo empleado registrado",
+      "body": "Hola,\n\nTienes una novedad en la aplicación de Hotel HM Gran Fiesta: Nuevo empleado registrado.\n\nPor favor, entra a la app para revisar los detalles.\n\nAtentamente,\nHotel HM Gran Fiesta",
+      "date": "2026-10-22T10:56:58.188Z"
+    }
+  ]
 }
-
-

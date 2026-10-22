@@ -72,6 +72,17 @@ class ApiService {
     return data;
   }
 
+  async registerEmployee(data: { name: string; email: string; phone?: string }): Promise<{ user: User; tempPassword: string; token: string }> {
+    const res = await fetch('/api/auth/register-employee', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const result = await this.handleResponse<{ user: User; tempPassword: string; token: string }>(res);
+    this.setToken(result.token);
+    return result;
+  }
+
   async getMe(): Promise<{ user: User }> {
     const res = await fetch('/api/auth/me', {
       headers: this.getHeaders(),
@@ -390,6 +401,21 @@ class ApiService {
       method: 'POST',
       headers: this.getHeaders(),
     });
+    return this.handleResponse(res);
+  }
+
+  async getDbStatus(): Promise<{
+    status: string;
+    timestamp: string;
+    usersCount: number;
+    schedulesCount: number;
+    requestsCount: number;
+    incidentsCount: number;
+    auditLogsCount: number;
+    firestoreProjectId: string;
+    firestoreDatabaseId: string;
+  }> {
+    const res = await fetch('/api/db/status');
     return this.handleResponse(res);
   }
 }

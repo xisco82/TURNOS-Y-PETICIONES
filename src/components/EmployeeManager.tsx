@@ -14,6 +14,8 @@ import {
   Phone,
   Mail,
   Tag,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { User } from '../types';
 import { api } from '../services/api';
@@ -40,6 +42,7 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [newPasswordCreated, setNewPasswordCreated] = useState<{ name: string; pass: string } | null>(null);
   const [errorNotification, setErrorNotification] = useState<string | null>(null);
+  const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -290,11 +293,23 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
                   <KeyRound className="w-3.5 h-3.5 text-slate-400" />
                   <span>Clave: </span>
                   <span className="font-mono font-semibold text-slate-700 dark:text-slate-300">
-                    {emp.tempPassword || '••••••••'}
+                    {revealedPasswords[emp.id] ? (emp.tempPassword || '••••••••') : '••••••••'}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-1">
+                  {emp.tempPassword && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setRevealedPasswords(prev => ({ ...prev, [emp.id]: !prev[emp.id] }))
+                      }
+                      className="p-1 text-slate-400 hover:text-slate-600 rounded"
+                      title={revealedPasswords[emp.id] ? 'Ocultar contraseña' : 'Ver contraseña'}
+                    >
+                      {revealedPasswords[emp.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  )}
                   {emp.tempPassword && (
                     <button
                       onClick={() => handleCopy(emp.tempPassword!, emp.id)}

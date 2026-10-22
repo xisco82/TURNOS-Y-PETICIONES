@@ -12,6 +12,7 @@ import { EmployeeMyScheduleView } from './components/EmployeeMyScheduleView';
 import { EmployeeProfileView } from './components/EmployeeProfileView';
 import { AppSettingsModal } from './components/AppSettingsModal';
 import { MandatoryTestsRunner } from './components/MandatoryTestsRunner';
+import { CompulsoryPasswordChangeModal } from './components/CompulsoryPasswordChangeModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { api } from './services/api';
 import { User } from './types';
@@ -21,7 +22,7 @@ import { LogoModalProvider } from './context/LogoModalContext';
 import { InteractiveLogo } from './components/InteractiveLogo';
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { user, loading, refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [employees, setEmployees] = useState<User[]>([]);
   const [showSettings, setShowSettings] = useState(false);
@@ -154,6 +155,14 @@ function AppContent() {
           </div>
         </div>
       </footer>
+
+      {/* Compulsory Password Change Modal */}
+      {user && user.mustChangePassword && (
+        <CompulsoryPasswordChangeModal
+          user={user}
+          onSuccess={refreshUser}
+        />
+      )}
 
       {/* Settings Modal */}
       {showSettings && (

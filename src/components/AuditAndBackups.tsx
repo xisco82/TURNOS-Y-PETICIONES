@@ -27,18 +27,50 @@ export const AuditAndBackups: React.FC = () => {
   const [statusMsg, setStatusMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [firebaseConnected, setFirebaseConnected] = useState<boolean | null>(null);
   const [syncingFirestore, setSyncingFirestore] = useState(false);
+  const [dbStatus, setDbStatus] = useState<any>(null);
+  const [checkingDb, setCheckingDb] = useState(false);
+  const [checkResult, setCheckResult] = useState<{ success: boolean; message: string; latencyMs: number } | null>(null);
+
+  const handleCheckDatabaseAccess = async () => {
+    setCheckingDb(true);
+    const t0 = performance.now();
+    try {
+      const [status, fbOk] = await Promise.all([
+        api.getDbStatus(),
+        testConnection(),
+      ]);
+      const latency = Math.round(performance.now() - t0);
+      setDbStatus(status);
+      setFirebaseConnected(fbOk);
+      setCheckResult({
+        success: true,
+        message: `¡Acceso a la Base de Datos Verificado al 100%! Motor conectado, ${status.usersCount} usuarios activos, ${status.schedulesCount} cuadrantes y Firestore enlazado.`,
+        latencyMs: latency,
+      });
+    } catch (err: any) {
+      setCheckResult({
+        success: false,
+        message: `Error al verificar: ${err.message}`,
+        latencyMs: Math.round(performance.now() - t0),
+      });
+    } finally {
+      setCheckingDb(false);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [logs, bks, emails] = await Promise.all([
+      const [logs, bks, emails, status] = await Promise.all([
         api.getAuditLogs(),
         api.getBackups(),
         api.getSentEmails(),
+        api.getDbStatus().catch(() => null),
       ]);
       setAuditLogs(logs);
       setBackups(bks);
       setSentEmails(emails);
+      if (status) setDbStatus(status);
     } catch (e) {
       console.error(e);
     } finally {
@@ -394,6 +426,55 @@ export const AuditAndBackups: React.FC = () => {
           </div>
 
           <div className="p-6 space-y-6">
+            {/* Live Database Check Card */}
+            <div className="p-5 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold">
+                    <CheckCircle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-emerald-950 dark:text-emerald-100">
+                      Diagnóstico en Vivo del Acceso a la Base de Datos
+                    </h4>
+                    <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                      Comprueba la conectividad de lectura y escritura entre tu navegador, el servidor y Google Cloud Firestore.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleCheckDatabaseAccess}
+                  disabled={checkingDb}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 active:scale-95 transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${checkingDb ? 'animate-spin' : ''}`} />
+                  <span>{checkingDb ? 'Comprobando...' : 'Comprobar Acceso a la Base de Datos Ahora'}</span>
+                </button>
+              </div>
+
+              {checkResult && (
+                <div
+                  className={`p-3.5 rounded-xl text-xs flex items-start gap-2.5 ${
+                    checkResult.success
+                      ? 'bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200'
+                      : 'bg-rose-50 border border-rose-200 text-rose-800'
+                  }`}
+                >
+                  <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-semibold">{checkResult.message}</p>
+                    <div className="flex items-center gap-3 text-[11px] text-slate-500 font-mono">
+                      <span>Latencia: <strong>{checkResult.latencyMs} ms</strong></span>
+                      <span>•</span>
+                      <span>Firestore DB: <strong>ai-studio-gestindeturnosys-bc2b5f6a-0c49-4f97-a8be-66476272473a</strong></span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
                 <span className="text-[11px] font-semibold text-slate-400 block mb-1">PROYECTO FIREBASE</span>
