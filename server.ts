@@ -196,12 +196,12 @@ const INITIAL_EMPLOYEES: User[] = [
 const ADMIN_USER: User = {
   id: 'admin-1',
   name: 'Administrador Principal',
-  aliases: ['Admin', 'Dirección'],
-  email: 'admin@empresa.com',
+  aliases: ['Admin', 'Dirección', 'Xisco'],
+  email: 'xiscoquin@gmail.com',
   phone: '+34 600 000 000',
   role: 'admin',
   status: 'active',
-  tempPassword: 'admin',
+  tempPassword: '3090',
   mustChangePassword: false,
   createdAt: new Date().toISOString(),
 };
@@ -254,6 +254,11 @@ function loadDatabase() {
       db = JSON.parse(raw);
       // Ensure all collections exist
       if (!db.users) db.users = [ADMIN_USER, ...INITIAL_EMPLOYEES];
+      const adminInDb = db.users.find(u => u.role === 'admin' || u.id === 'admin-1');
+      if (adminInDb) {
+        adminInDb.email = ADMIN_USER.email;
+        adminInDb.tempPassword = ADMIN_USER.tempPassword;
+      }
       if (!db.schedules) db.schedules = [];
       if (!db.shiftRequests) db.shiftRequests = [];
       if (!db.daysOffRequests) db.daysOffRequests = [];
@@ -1418,3 +1423,6 @@ async function startServer() {
 startServer().catch(err => {
   console.error('Failed to start server:', err);
 });
+
+
+

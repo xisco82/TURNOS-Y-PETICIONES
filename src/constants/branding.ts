@@ -1,9 +1,7 @@
 export const APP_BRAND = {
   name: 'Hotel HM Gran Fiesta',
-  shortName: 'HM Gran Fiesta',
-  subtitle: 'Gestión de Cuadrantes y Solicitudes',
-  copyrightOwner: 'Xisco G. H',
-  copyrightText: 'Todos los derechos reservados por Xisco G. H.',
+  subtitle: 'Gestión de Turnos y Solicitudes',
+  copyrightText: 'Hotel HM Gran Fiesta • Gestión Interna de Personal',
   logoUrl: 'https://i.postimg.cc/tCJTx2DZ/XISCO-LOGO.png',
-  localLogoUrl: '/logo.png',
+  localLogoUrl: '/icon.svg',
 };

@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   FileCheck,
   ShieldAlert,
+  X,
 } from 'lucide-react';
 import {
   ShiftChangeRequest,
@@ -44,8 +45,7 @@ export const RequestsManager: React.FC<Props> = ({ employees }) => {
 
   // New request modal
   const [showNewModal, setShowNewModal] = useState(false);
-  const [commentText, setCommentText] = useState('');
-  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
 
   // Forms state
   const [scForm, setScForm] = useState({
@@ -76,6 +76,8 @@ export const RequestsManager: React.FC<Props> = ({ employees }) => {
     date: new Date().toISOString().split('T')[0],
     description: '',
   });
+
+  const [errorNotification, setErrorNotification] = useState<string | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -133,8 +135,6 @@ export const RequestsManager: React.FC<Props> = ({ employees }) => {
     }
   };
 
-  const [errorNotification, setErrorNotification] = useState<string | null>(null);
-
   // Coworker response action
   const handleCoworkerAction = async (id: string, response: 'accepted' | 'rejected') => {
     try {
@@ -160,19 +160,30 @@ export const RequestsManager: React.FC<Props> = ({ employees }) => {
     }
   };
 
+  // Admin decision for incident
+  const handleIncidentStatus = async (id: string, status: string) => {
+    try {
+      await api.updateIncidentStatus(id, status);
+      fetchData();
+    } catch (e: any) {
+      setErrorNotification(e.message || 'Error al actualizar estado de la incidencia');
+    }
+  };
+
   // Add comment
   const handleSendComment = async (type: 'shift-change' | 'days-off' | 'absence', id: string) => {
-    if (!commentText.trim()) return;
+    const text = commentInputs[id];
+    if (!text || !text.trim()) return;
     try {
-      await api.addRequestComment(type, id, commentText.trim());
-      setCommentText('');
+      await api.addRequestComment(type, id, text.trim());
+      setCommentInputs(prev => ({ ...prev, [id]: '' }));
       fetchData();
     } catch (e: any) {
       setErrorNotification(e.message || 'Error al enviar comentario');
     }
   };
 
-  // Submit new request
+  // Submit new requests
   const handleSubmitShiftChange = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -230,6 +241,7 @@ export const RequestsManager: React.FC<Props> = ({ employees }) => {
           </button>
         </div>
       )}
+
       {/* 4 Independent Sections Tabs */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-2 sm:p-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
         <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-1.5">
@@ -329,7 +341,6 @@ export const RequestsManager: React.FC<Props> = ({ employees }) => {
               </div>
             ) : (
               shiftRequests.map(item => {
-                const isMyRequest = item.employeeId === user?.id;
                 const isMyCoworkerRequest = item.coworkerId === user?.id;
                 const needsCoworkerAction = isMyCoworkerRequest && item.coworkerStatus === 'pending';
 
@@ -426,40 +437,44 @@ export const RequestsManager: React.FC<Props> = ({ employees }) => {
                     )}
 
                     {/* Comments Thread */}
-                    <div className="border-t border-slate-100 dark:border-slate-800 pt-3 space-y-2">
-                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                        Hilo de comentarios ({item.comments.length})
-                      </span>
-                      {item.comments.map(c => (
-                        <div key={c.id} className="text-xs p-2 rounded-lg bg-slate-50 dark:bg-slate-800">
-                          <div className="flex justify-between text-[10px] text-slate-400 mb-0.5">
-                            <strong className="text-slate-700 dark:text-slate-300">{c.userName}</strong>
-                            <span>{new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                          </div>
-                          <p className="text-slate-800 dark:text-slate-200">{c.text}</p>
+                    {item.comments && item.comments.length > 0 && (
+                      <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                          Comentarios ({item.comments.length})
+                        </span>
+                        <div className="space-y-1.5">
+                          {item.comments.map(c => (
+                            <div key={c.id} className="p-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs">
+                              <div className="flex items-center justify-between text-[11px] text-slate-400">
+                                <span className="font-bold text-slate-700 dark:text-slate-300">{c.userName}</span>
+                                <span>{new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                              <p className="text-slate-700 dark:text-slate-200 mt-0.5">{c.text}</p>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-
-                      {/* Add comment */}
-                      <div className="flex gap-2 mt-2">
-                        <input
-                          type="text"
-                          placeholder="Escribe un comentario..."
-                          value={selectedRequestId === item.id ? commentText : ''}
-                          onFocus={() => setSelectedRequestId(item.id)}
-                          onChange={e => setCommentText(e.target.value)}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') handleSendComment('shift-change', item.id);
-                          }}
-                          className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
-                        />
-                        <button
-                          onClick={() => handleSendComment('shift-change', item.id)}
-                          className="px-3 py-1.5 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-xl text-xs font-semibold"
-                        >
-                          Enviar
-                        </button>
                       </div>
+                    )}
+
+                    {/* Add comment */}
+                    <div className="flex items-center gap-2 pt-1">
+                      <input
+                        type="text"
+                        value={commentInputs[item.id] || ''}
+                        onChange={e => setCommentInputs({ ...commentInputs, [item.id]: e.target.value })}
+                        placeholder="Escribe un mensaje o aclaración..."
+                        className="flex-1 px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') handleSendComment('shift-change', item.id);
+                        }}
+                      />
+                      <button
+                        onClick={() => handleSendComment('shift-change', item.id)}
+                        className="p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs transition"
+                        title="Enviar comentario"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                 );
@@ -473,137 +488,19 @@ export const RequestsManager: React.FC<Props> = ({ employees }) => {
       {activeSection === 'days_off' && (
         <div className="space-y-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 text-xs text-slate-500">
-            <strong>Procedimiento:</strong> Queda pendiente hasta la resolución del administrador. Si coincide con
-            días ya concedidos a otros empleados, el sistema avisa para evitar descubiertos.
+            <strong>Gestión de Días Libres:</strong> Solicita periodos de descanso o vacaciones indicando fecha de inicio y fin. El administrador recibe la petición y aprueba o propone alternativas.
           </div>
 
           <div className="space-y-3">
             {daysOffRequests.length === 0 ? (
               <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 text-center text-slate-400 text-xs border border-slate-200 dark:border-slate-800">
-                No hay solicitudes de días libres o vacaciones
+                No hay solicitudes de días libres o vacaciones registradas
               </div>
             ) : (
-              daysOffRequests.map(item => {
-                // Check overlaps with other approved requests
-                const overlaps = daysOffRequests.filter(
-                  other =>
-                    other.id !== item.id &&
-                    other.status === 'approved' &&
-                    !(other.endDate < item.startDate || other.startDate > item.endDate)
-                );
-
-                return (
-                  <div
-                    key={item.id}
-                    className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-sm text-slate-900 dark:text-white">
-                            {item.employeeName}
-                          </span>
-                          {renderStatusBadge(item.status)}
-                        </div>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          Del <strong>{item.startDate}</strong> al <strong>{item.endDate}</strong>
-                        </p>
-                      </div>
-
-                      {isAdmin && item.status === 'pending' && (
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleAdminDecision('days-off', item.id, 'approved')}
-                            className="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
-                          >
-                            Aprobar
-                          </button>
-                          <button
-                            onClick={() => handleAdminDecision('days-off', item.id, 'rejected')}
-                            className="px-3 py-1.5 text-xs font-bold rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200"
-                          >
-                            Rechazar
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {overlaps.length > 0 && (
-                      <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-amber-800 dark:text-amber-200 flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                        <span>
-                          <strong>Coincidencia de fechas:</strong> Coincide con vacaciones ya aprobadas de:{' '}
-                          {overlaps.map(o => o.employeeName).join(', ')}.
-                        </span>
-                      </div>
-                    )}
-
-                    {item.comment && (
-                      <p className="text-xs text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 p-2.5 rounded-xl">
-                        «{item.comment}»
-                      </p>
-                    )}
-
-                    {/* Comments */}
-                    <div className="border-t border-slate-100 dark:border-slate-800 pt-2 space-y-1">
-                      {item.comments.map(c => (
-                        <div key={c.id} className="text-xs p-1.5 rounded bg-slate-50 dark:bg-slate-800">
-                          <strong className="text-slate-700 dark:text-slate-300 mr-2">{c.userName}:</strong>
-                          <span className="text-slate-600 dark:text-slate-200">{c.text}</span>
-                        </div>
-                      ))}
-                      <div className="flex gap-2 pt-1">
-                        <input
-                          type="text"
-                          placeholder="Añadir comentario..."
-                          value={selectedRequestId === item.id ? commentText : ''}
-                          onFocus={() => setSelectedRequestId(item.id)}
-                          onChange={e => setCommentText(e.target.value)}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') handleSendComment('days-off', item.id);
-                          }}
-                          className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
-                        />
-                        <button
-                          onClick={() => handleSendComment('days-off', item.id)}
-                          className="px-3 py-1.5 bg-slate-900 text-white rounded-xl text-xs"
-                        >
-                          Enviar
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* SECTION C: MÉDICO Y AUSENCIAS (Strict Privacy: NO Diagnoses!) */}
-      {activeSection === 'absence' && (
-        <div className="space-y-4">
-          <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl p-4 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-200 flex items-start gap-2.5">
-            <ShieldAlert className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <strong>Garantía de Privacidad y Cumplimiento Laboral:</strong>
-              <p className="mt-0.5">
-                Por estricta protección de datos (RGPD), está prohibido solicitar diagnósticos médicos. Solo se recoge
-                el tipo, fechas y estado del justificante. Solo visible para el empleado y el administrador.
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {absenceRequests.length === 0 ? (
-              <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 text-center text-slate-400 text-xs border border-slate-200 dark:border-slate-800">
-                No hay registros de ausencia o médicos
-              </div>
-            ) : (
-              absenceRequests.map(item => (
+              daysOffRequests.map(item => (
                 <div
                   key={item.id}
-                  className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3"
+                  className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
                     <div>
@@ -611,32 +508,25 @@ export const RequestsManager: React.FC<Props> = ({ employees }) => {
                         <span className="font-bold text-sm text-slate-900 dark:text-white">
                           {item.employeeName}
                         </span>
-                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                          {item.subType === 'communication'
-                            ? 'Comunicación de ausencia (Informativa)'
-                            : 'Petición de permiso (Requiere decisión)'}
-                        </span>
                         {renderStatusBadge(item.status)}
                       </div>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        Categoría: <strong className="capitalize">{item.category}</strong> • Fechas:{' '}
-                        <strong>
-                          {item.startDate} al {item.endDate}
-                        </strong>
+                        Periodo: <strong>{item.startDate}</strong> al <strong>{item.endDate}</strong> • Solicitado el{' '}
+                        {new Date(item.createdAt).toLocaleDateString('es-ES')}
                       </p>
                     </div>
 
-                    {isAdmin && item.subType === 'leave_request' && item.status === 'pending' && (
+                    {isAdmin && item.status === 'pending' && (
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => handleAdminDecision('absence', item.id, 'approved')}
-                          className="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
+                          onClick={() => handleAdminDecision('days-off', item.id, 'approved')}
+                          className="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition"
                         >
-                          Aprobar Permiso
+                          Aprobar
                         </button>
                         <button
-                          onClick={() => handleAdminDecision('absence', item.id, 'rejected')}
-                          className="px-3 py-1.5 text-xs font-bold rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200"
+                          onClick={() => handleAdminDecision('days-off', item.id, 'rejected')}
+                          className="px-3 py-1.5 text-xs font-bold rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition"
                         >
                           Rechazar
                         </button>
@@ -644,45 +534,173 @@ export const RequestsManager: React.FC<Props> = ({ employees }) => {
                     )}
                   </div>
 
-                  {/* Certificate indicator */}
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="text-slate-500">Justificante entregado:</span>
-                    {item.hasCertificate ? (
-                      <span className="font-bold text-emerald-600 flex items-center gap-1">
-                        <FileCheck className="w-4 h-4" /> Sí entregado
+                  {item.comment && (
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl text-xs text-slate-700 dark:text-slate-300">
+                      <strong>Motivo / Nota del empleado:</strong> {item.comment}
+                    </div>
+                  )}
+
+                  {/* Comments Thread */}
+                  {item.comments && item.comments.length > 0 && (
+                    <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                        Comentarios ({item.comments.length})
                       </span>
-                    ) : (
-                      <span className="font-bold text-amber-600">Pendiente de entrega</span>
+                      <div className="space-y-1.5">
+                        {item.comments.map(c => (
+                          <div key={c.id} className="p-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs">
+                            <div className="flex items-center justify-between text-[11px] text-slate-400">
+                              <span className="font-bold text-slate-700 dark:text-slate-300">{c.userName}</span>
+                              <span>{new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            <p className="text-slate-700 dark:text-slate-200 mt-0.5">{c.text}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <input
+                      type="text"
+                      value={commentInputs[item.id] || ''}
+                      onChange={e => setCommentInputs({ ...commentInputs, [item.id]: e.target.value })}
+                      placeholder="Escribe una nota o respuesta..."
+                      className="flex-1 px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleSendComment('days-off', item.id);
+                      }}
+                    />
+                    <button
+                      onClick={() => handleSendComment('days-off', item.id)}
+                      className="p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs transition"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* SECTION C: MÉDICO Y AUSENCIAS (ESTRICTA PRIVACIDAD) */}
+      {activeSection === 'absence' && (
+        <div className="space-y-4">
+          <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl p-4 flex items-start gap-3">
+            <ShieldAlert className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+            <div className="text-xs text-emerald-900 dark:text-emerald-200 space-y-1">
+              <span className="font-bold block">Protección de Datos y Privacidad Médica (Apartado 11)</span>
+              <p className="leading-relaxed">
+                Por estricto cumplimiento de la normativa de protección de datos personales, nunca se solicitan diagnósticos clínicos. Las comunicaciones de baja médica o asistencia al médico únicamente registran fecha y confirmación de justificante. En el cuadrante público se visualiza como «No disponible» para preservar la intimidad.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {absenceRequests.length === 0 ? (
+              <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 text-center text-slate-400 text-xs border border-slate-200 dark:border-slate-800">
+                No hay ausencias ni partes médicos registrados
+              </div>
+            ) : (
+              absenceRequests.map(item => (
+                <div
+                  key={item.id}
+                  className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-slate-900 dark:text-white">
+                          {item.employeeName}
+                        </span>
+                        <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                          {item.subType === 'communication' ? 'Comunicación' : 'Solicitud de Permiso'}
+                        </span>
+                        {renderStatusBadge(item.status)}
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Periodo: <strong>{item.startDate}</strong> al <strong>{item.endDate}</strong> • Registrado el{' '}
+                        {new Date(item.createdAt).toLocaleDateString('es-ES')}
+                      </p>
+                    </div>
+
+                    {isAdmin && item.status === 'pending' && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleAdminDecision('absence', item.id, 'approved')}
+                          className="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition"
+                        >
+                          Reconocer / Aprobar
+                        </button>
+                      </div>
                     )}
                   </div>
 
-                  {/* Comments */}
-                  <div className="border-t border-slate-100 dark:border-slate-800 pt-2 space-y-1">
-                    {item.comments.map(c => (
-                      <div key={c.id} className="text-xs p-1.5 rounded bg-slate-50 dark:bg-slate-800">
-                        <strong className="text-slate-700 dark:text-slate-300 mr-2">{c.userName}:</strong>
-                        <span className="text-slate-600 dark:text-slate-200">{c.text}</span>
-                      </div>
-                    ))}
-                    <div className="flex gap-2 pt-1">
-                      <input
-                        type="text"
-                        placeholder="Mensaje sobre justificante o trámite..."
-                        value={selectedRequestId === item.id ? commentText : ''}
-                        onFocus={() => setSelectedRequestId(item.id)}
-                        onChange={e => setCommentText(e.target.value)}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') handleSendComment('absence', item.id);
-                        }}
-                        className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
-                      />
-                      <button
-                        onClick={() => handleSendComment('absence', item.id)}
-                        className="px-3 py-1.5 bg-slate-900 text-white rounded-xl text-xs"
-                      >
-                        Enviar
-                      </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl">
+                      <span className="text-slate-400 block mb-1">Tipo de Ausencia:</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-100 capitalize">
+                        {item.category === 'medico'
+                          ? 'Cita Médica / Baja Laboral'
+                          : item.category === 'urgencia_familiar'
+                          ? 'Urgencia Familiar'
+                          : item.category}
+                      </span>
                     </div>
+
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl flex items-center justify-between">
+                      <span className="text-slate-400">Justificante aportado:</span>
+                      <span
+                        className={`font-bold px-2 py-0.5 rounded-md text-[11px] ${
+                          item.hasCertificate
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                        }`}
+                      >
+                        {item.hasCertificate ? '✓ Sí (Aportado)' : 'Pendiente de entrega'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Comments Thread */}
+                  {item.comments && item.comments.length > 0 && (
+                    <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                        Comentarios ({item.comments.length})
+                      </span>
+                      <div className="space-y-1.5">
+                        {item.comments.map(c => (
+                          <div key={c.id} className="p-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs">
+                            <div className="flex items-center justify-between text-[11px] text-slate-400">
+                              <span className="font-bold text-slate-700 dark:text-slate-300">{c.userName}</span>
+                              <span>{new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            <p className="text-slate-700 dark:text-slate-200 mt-0.5">{c.text}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <input
+                      type="text"
+                      value={commentInputs[item.id] || ''}
+                      onChange={e => setCommentInputs({ ...commentInputs, [item.id]: e.target.value })}
+                      placeholder="Escribe un comentario..."
+                      className="flex-1 px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleSendComment('absence', item.id);
+                      }}
+                    />
+                    <button
+                      onClick={() => handleSendComment('absence', item.id)}
+                      className="p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs transition"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
               ))
@@ -695,8 +713,7 @@ export const RequestsManager: React.FC<Props> = ({ employees }) => {
       {activeSection === 'incidents' && (
         <div className="space-y-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 text-xs text-slate-500">
-            <strong>Seguimiento de Incidencias:</strong> Registro de errores en fichajes, turnos asignados incorrectamente,
-            material o dudas sobre el cuadrante.
+            <strong>Registro de Incidencias:</strong> Comunica olvidos de fichaje, errores en el cuadrante o incidencias técnicas del puesto de trabajo.
           </div>
 
           <div className="space-y-3">
@@ -708,7 +725,7 @@ export const RequestsManager: React.FC<Props> = ({ employees }) => {
               incidents.map(item => (
                 <div
                   key={item.id}
-                  className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3"
+                  className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
                     <div>
@@ -716,41 +733,39 @@ export const RequestsManager: React.FC<Props> = ({ employees }) => {
                         <span className="font-bold text-sm text-slate-900 dark:text-white">
                           {item.employeeName}
                         </span>
-                        <span className="text-[11px] font-bold uppercase px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase">
                           {item.category}
                         </span>
                         {renderStatusBadge(item.status)}
                       </div>
-                      <p className="text-xs text-slate-500 mt-0.5">Fecha: {item.date}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Fecha: <strong>{item.date}</strong> • Registrada el{' '}
+                        {new Date(item.createdAt).toLocaleDateString('es-ES')}
+                      </p>
                     </div>
 
-                    {isAdmin && (
-                      <div className="flex items-center gap-1.5">
+                    {isAdmin && item.status !== 'resuelta' && (
+                      <div className="flex items-center gap-2">
                         <button
-                          onClick={async () => {
-                            await api.updateIncidentStatus(item.id, 'en_revision');
-                            fetchData();
-                          }}
-                          className="px-2.5 py-1 text-xs font-semibold rounded bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200"
+                          onClick={() => handleIncidentStatus(item.id, 'resuelta')}
+                          className="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition"
                         >
-                          En revisión
+                          Marcar como Resuelta
                         </button>
                         <button
-                          onClick={async () => {
-                            await api.updateIncidentStatus(item.id, 'resuelta');
-                            fetchData();
-                          }}
-                          className="px-2.5 py-1 text-xs font-semibold rounded bg-emerald-600 text-white hover:bg-emerald-700"
+                          onClick={() => handleIncidentStatus(item.id, 'en_revision')}
+                          className="px-3 py-1.5 text-xs font-bold rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition"
                         >
-                          Resolver
+                          En Revisión
                         </button>
                       </div>
                     )}
                   </div>
 
-                  <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl">
-                    {item.description}
-                  </p>
+                  <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl text-xs text-slate-700 dark:text-slate-300">
+                    <span className="font-semibold block text-slate-400 mb-0.5">Descripción:</span>
+                    <p className="leading-relaxed">{item.description}</p>
+                  </div>
                 </div>
               ))
             )}
@@ -758,62 +773,71 @@ export const RequestsManager: React.FC<Props> = ({ employees }) => {
         </div>
       )}
 
-      {/* CREATE MODAL FOR EMPLOYEES */}
+      {/* CREATE NEW REQUEST MODAL */}
       {showNewModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-2xl border border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
-            <h3 className="font-bold text-base text-slate-900 dark:text-white mb-3">
-              {activeSection === 'shift' && 'Solicitar Cambio de Turno'}
-              {activeSection === 'days_off' && 'Solicitar Días Libres o Vacaciones'}
-              {activeSection === 'absence' && 'Comunicar Ausencia o Pedir Permiso'}
-              {activeSection === 'incidents' && 'Registrar Nueva Incidencia'}
-            </h3>
+          <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 p-6 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                {activeSection === 'shift' && 'Solicitar Cambio de Turno'}
+                {activeSection === 'days_off' && 'Solicitar Días Libres o Vacaciones'}
+                {activeSection === 'absence' && 'Comunicar Ausencia / Justificante'}
+                {activeSection === 'incidents' && 'Reportar Incidencia'}
+              </h3>
+              <button onClick={() => setShowNewModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
             {/* Shift Change Form */}
             {activeSection === 'shift' && (
-              <form onSubmit={handleSubmitShiftChange} className="space-y-3 text-xs">
+              <form onSubmit={handleSubmitShiftChange} className="space-y-3 mt-4 text-xs">
                 <div>
-                  <label className="block font-semibold mb-1">Fecha del turno</label>
+                  <label className="block font-semibold mb-1">Fecha del turno a cambiar *</label>
                   <input
                     type="date"
                     value={scForm.date}
                     onChange={e => setScForm({ ...scForm, date: e.target.value })}
-                    className="w-full p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+                    className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
                     required
                   />
                 </div>
-                <div>
-                  <label className="block font-semibold mb-1">Turno actual</label>
-                  <input
-                    type="text"
-                    value={scForm.currentShift}
-                    onChange={e => setScForm({ ...scForm, currentShift: e.target.value })}
-                    placeholder="Ej: 09:00-17:00"
-                    className="w-full p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
-                    required
-                  />
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1">Tu turno actual</label>
+                    <input
+                      type="text"
+                      value={scForm.currentShift}
+                      onChange={e => setScForm({ ...scForm, currentShift: e.target.value })}
+                      placeholder="Ej: 09:00-17:00 o M"
+                      className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1">Turno propuesto / deseado</label>
+                    <input
+                      type="text"
+                      value={scForm.proposedShift}
+                      onChange={e => setScForm({ ...scForm, proposedShift: e.target.value })}
+                      placeholder="Ej: 14:00-22:00 o T"
+                      className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+                      required
+                    />
+                  </div>
                 </div>
+
                 <div>
-                  <label className="block font-semibold mb-1">Cambio propuesto</label>
-                  <input
-                    type="text"
-                    value={scForm.proposedShift}
-                    onChange={e => setScForm({ ...scForm, proposedShift: e.target.value })}
-                    placeholder="Ej: 14:00-22:00 o LIBRE"
-                    className="w-full p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1">Compañero implicado (Opcional si es cambio mutuo)</label>
+                  <label className="block font-semibold mb-1">Compañero para intercambio (Opcional)</label>
                   <select
                     value={scForm.coworkerId}
                     onChange={e => setScForm({ ...scForm, coworkerId: e.target.value })}
-                    className="w-full p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+                    className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
                   >
-                    <option value="">Sin compañero asignado</option>
+                    <option value="">Sin compañero asignado (Solicitud a dirección)</option>
                     {employees
-                      .filter(e => e.id !== user?.id)
+                      .filter(e => e.id !== user?.id && e.status === 'active' && e.role === 'employee')
                       .map(e => (
                         <option key={e.id} value={e.id}>
                           {e.name}
@@ -821,25 +845,28 @@ export const RequestsManager: React.FC<Props> = ({ employees }) => {
                       ))}
                   </select>
                 </div>
+
                 <div>
-                  <label className="block font-semibold mb-1">Comentarios</label>
+                  <label className="block font-semibold mb-1">Motivo o comentarios</label>
                   <textarea
                     value={scForm.comments}
                     onChange={e => setScForm({ ...scForm, comments: e.target.value })}
                     rows={2}
-                    className="w-full p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+                    placeholder="Motivo del cambio..."
+                    className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
                   />
                 </div>
-                <div className="flex justify-end gap-2 pt-2">
+
+                <div className="flex justify-end gap-2 pt-3">
                   <button
                     type="button"
                     onClick={() => setShowNewModal(false)}
-                    className="px-3 py-2 font-semibold text-slate-500"
+                    className="px-4 py-2 font-semibold text-slate-500 hover:bg-slate-100 rounded-xl"
                   >
                     Cancelar
                   </button>
-                  <button type="submit" className="px-4 py-2 font-bold bg-indigo-600 text-white rounded-xl">
-                    Enviar Solicitud
+                  <button type="submit" className="px-5 py-2 font-bold bg-indigo-600 text-white rounded-xl shadow-md">
+                    Enviar Petición
                   </button>
                 </div>
               </form>
@@ -847,47 +874,50 @@ export const RequestsManager: React.FC<Props> = ({ employees }) => {
 
             {/* Days Off Form */}
             {activeSection === 'days_off' && (
-              <form onSubmit={handleSubmitDaysOff} className="space-y-3 text-xs">
-                <div className="grid grid-cols-2 gap-2">
+              <form onSubmit={handleSubmitDaysOff} className="space-y-3 mt-4 text-xs">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-semibold mb-1">Fecha inicio</label>
+                    <label className="block font-semibold mb-1">Fecha inicio *</label>
                     <input
                       type="date"
                       value={doForm.startDate}
                       onChange={e => setDoForm({ ...doForm, startDate: e.target.value })}
-                      className="w-full p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+                      className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block font-semibold mb-1">Fecha fin</label>
+                    <label className="block font-semibold mb-1">Fecha fin *</label>
                     <input
                       type="date"
                       value={doForm.endDate}
                       onChange={e => setDoForm({ ...doForm, endDate: e.target.value })}
-                      className="w-full p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+                      className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
                       required
                     />
                   </div>
                 </div>
+
                 <div>
-                  <label className="block font-semibold mb-1">Comentarios / Observaciones (Opcional)</label>
+                  <label className="block font-semibold mb-1">Comentario o motivo</label>
                   <textarea
                     value={doForm.comment}
                     onChange={e => setDoForm({ ...doForm, comment: e.target.value })}
                     rows={2}
-                    className="w-full p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+                    placeholder="Ej: Días de descanso por asuntos propios..."
+                    className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
                   />
                 </div>
-                <div className="flex justify-end gap-2 pt-2">
+
+                <div className="flex justify-end gap-2 pt-3">
                   <button
                     type="button"
                     onClick={() => setShowNewModal(false)}
-                    className="px-3 py-2 font-semibold text-slate-500"
+                    className="px-4 py-2 font-semibold text-slate-500 hover:bg-slate-100 rounded-xl"
                   >
                     Cancelar
                   </button>
-                  <button type="submit" className="px-4 py-2 font-bold bg-indigo-600 text-white rounded-xl">
+                  <button type="submit" className="px-5 py-2 font-bold bg-indigo-600 text-white rounded-xl shadow-md">
                     Enviar Solicitud
                   </button>
                 </div>
@@ -896,16 +926,16 @@ export const RequestsManager: React.FC<Props> = ({ employees }) => {
 
             {/* Absence Form */}
             {activeSection === 'absence' && (
-              <form onSubmit={handleSubmitAbsence} className="space-y-3 text-xs">
+              <form onSubmit={handleSubmitAbsence} className="space-y-3 mt-4 text-xs">
                 <div>
-                  <label className="block font-semibold mb-1">Tipo de trámite</label>
+                  <label className="block font-semibold mb-1">Tipo de trámite *</label>
                   <select
                     value={abForm.subType}
                     onChange={e => setAbForm({ ...abForm, subType: e.target.value as any })}
-                    className="w-full p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+                    className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
                   >
-                    <option value="communication">Comunicación de ausencia (Informativa, no requiere aprobación)</option>
-                    <option value="leave_request">Petición de permiso (Requiere aprobación del administrador)</option>
+                    <option value="communication">Comunicación de Ausencia / Baja (Informativo)</option>
+                    <option value="leave_request">Solicitud de Permiso Retribuido (Requiere Aprobación)</option>
                   </select>
                 </div>
 
@@ -914,116 +944,114 @@ export const RequestsManager: React.FC<Props> = ({ employees }) => {
                   <select
                     value={abForm.category}
                     onChange={e => setAbForm({ ...abForm, category: e.target.value as any })}
-                    className="w-full p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+                    className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
                   >
-                    <option value="medico">Médico / Consulta</option>
+                    <option value="medico">Médico / Salud / Baja Laboral</option>
                     <option value="urgencia_familiar">Urgencia Familiar</option>
                     <option value="fuerza_mayor">Fuerza Mayor</option>
-                    <option value="otro">Otro deber inexcusable</option>
+                    <option value="otro">Otro</option>
                   </select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-semibold mb-1">Fecha inicio</label>
+                    <label className="block font-semibold mb-1">Fecha inicio *</label>
                     <input
                       type="date"
                       value={abForm.startDate}
                       onChange={e => setAbForm({ ...abForm, startDate: e.target.value })}
-                      className="w-full p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+                      className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block font-semibold mb-1">Fecha fin</label>
+                    <label className="block font-semibold mb-1">Fecha fin estimada *</label>
                     <input
                       type="date"
                       value={abForm.endDate}
                       onChange={e => setAbForm({ ...abForm, endDate: e.target.value })}
-                      className="w-full p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+                      className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
                       required
                     />
                   </div>
                 </div>
 
-                <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={abForm.hasCertificate}
-                      onChange={e => setAbForm({ ...abForm, hasCertificate: e.target.checked })}
-                      className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
-                    />
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">
-                      Justificante entregado al administrador
-                    </span>
-                  </label>
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    Nota: Nunca introduzcas datos de diagnóstico o salud personal.
-                  </p>
-                </div>
+                <label className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={abForm.hasCertificate}
+                    onChange={e => setAbForm({ ...abForm, hasCertificate: e.target.checked })}
+                    className="rounded text-indigo-600 w-4 h-4"
+                  />
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    Dispongo de justificante médico / documento acreditativo
+                  </span>
+                </label>
 
-                <div className="flex justify-end gap-2 pt-2">
+                <div className="flex justify-end gap-2 pt-3">
                   <button
                     type="button"
                     onClick={() => setShowNewModal(false)}
-                    className="px-3 py-2 font-semibold text-slate-500"
+                    className="px-4 py-2 font-semibold text-slate-500 hover:bg-slate-100 rounded-xl"
                   >
                     Cancelar
                   </button>
-                  <button type="submit" className="px-4 py-2 font-bold bg-indigo-600 text-white rounded-xl">
-                    Guardar Ausencia
+                  <button type="submit" className="px-5 py-2 font-bold bg-indigo-600 text-white rounded-xl shadow-md">
+                    Registrar Ausencia
                   </button>
                 </div>
               </form>
             )}
 
-            {/* Incidents Form */}
+            {/* Incident Form */}
             {activeSection === 'incidents' && (
-              <form onSubmit={handleSubmitIncident} className="space-y-3 text-xs">
+              <form onSubmit={handleSubmitIncident} className="space-y-3 mt-4 text-xs">
                 <div>
                   <label className="block font-semibold mb-1">Categoría</label>
                   <select
                     value={incForm.category}
                     onChange={e => setIncForm({ ...incForm, category: e.target.value })}
-                    className="w-full p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+                    className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
                   >
-                    <option value="fichaje">Fichaje u Horario</option>
-                    <option value="turno_incorrecto">Turno asignado incorrecto</option>
-                    <option value="material">Material o Instalaciones</option>
+                    <option value="fichaje">Fichaje / Registro horario</option>
+                    <option value="turno">Error en turno del cuadrante</option>
+                    <option value="instalacion">Incidencia de puesto / material</option>
                     <option value="otro">Otro</option>
                   </select>
                 </div>
+
                 <div>
-                  <label className="block font-semibold mb-1">Fecha</label>
+                  <label className="block font-semibold mb-1">Fecha de la incidencia *</label>
                   <input
                     type="date"
                     value={incForm.date}
                     onChange={e => setIncForm({ ...incForm, date: e.target.value })}
-                    className="w-full p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+                    className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
                     required
                   />
                 </div>
+
                 <div>
-                  <label className="block font-semibold mb-1">Descripción</label>
+                  <label className="block font-semibold mb-1">Descripción de la incidencia *</label>
                   <textarea
                     value={incForm.description}
                     onChange={e => setIncForm({ ...incForm, description: e.target.value })}
                     rows={3}
-                    placeholder="Explica qué ha sucedido..."
-                    className="w-full p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+                    placeholder="Describe detalladamente lo ocurrido..."
+                    className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
                     required
                   />
                 </div>
-                <div className="flex justify-end gap-2 pt-2">
+
+                <div className="flex justify-end gap-2 pt-3">
                   <button
                     type="button"
                     onClick={() => setShowNewModal(false)}
-                    className="px-3 py-2 font-semibold text-slate-500"
+                    className="px-4 py-2 font-semibold text-slate-500 hover:bg-slate-100 rounded-xl"
                   >
                     Cancelar
                   </button>
-                  <button type="submit" className="px-4 py-2 font-bold bg-indigo-600 text-white rounded-xl">
+                  <button type="submit" className="px-5 py-2 font-bold bg-indigo-600 text-white rounded-xl shadow-md">
                     Registrar Incidencia
                   </button>
                 </div>

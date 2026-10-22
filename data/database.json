@@ -7,11 +7,11 @@
         "Admin",
         "Dirección"
       ],
-      "email": "admin@empresa.com",
+      "email": "xiscoquin@gmail.com",
       "phone": "+34 600 000 000",
       "role": "admin",
       "status": "active",
-      "tempPassword": "admin",
+      "tempPassword": "3090",
       "mustChangePassword": false,
       "createdAt": "2026-10-22T09:37:00.648Z"
     },
@@ -227,3 +227,5 @@
   },
   "sentEmails": []
 }
+
+

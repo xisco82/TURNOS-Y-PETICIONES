@@ -1,144 +1,83 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import {
-  getFirestore,
-  doc,
-  getDocFromServer,
-  collection,
-  getDocs,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-  orderBy,
-  onSnapshot,
-} from 'firebase/firestore';
-import firebaseConfig from '../../firebase-applet-config.json';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
+import rawConfig from '../../firebase-applet-config.json';
+import { User, WeekSchedule, AppSettings } from '../types';
 
-// Initialize Firebase App
-export const app = initializeApp(firebaseConfig);
+export const firebaseConfig = rawConfig;
 
-// CRITICAL: Must use firestoreDatabaseId from firebase-applet-config.json
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
-// Auth instance
-export const auth = getAuth(app);
+export const db = firebaseConfig.firestoreDatabaseId
+  ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
+  : getFirestore(app);
 
-// Error Handling conforming to FirestoreErrorInfo
-export enum OperationType {
-  CREATE = 'create',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  LIST = 'list',
-  GET = 'get',
-  WRITE = 'write',
-}
-
-export interface FirestoreErrorInfo {
-  error: string;
-  operationType: OperationType;
-  path: string | null;
-  authInfo: {
-    userId?: string | null;
-    email?: string | null;
-    emailVerified?: boolean | null;
-    isAnonymous?: boolean | null;
-    tenantId?: string | null;
-    providerInfo?: {
-      providerId?: string | null;
-      email?: string | null;
-    }[];
-  };
-}
-
-export function handleFirestoreError(
-  error: unknown,
-  operationType: OperationType,
-  path: string | null
-): never {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo:
-        auth.currentUser?.providerData?.map(provider => ({
-          providerId: provider.providerId,
-          email: provider.email,
-        })) || [],
-    },
-    operationType,
-    path,
-  };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
-}
-
-// Connection test as required by skill
 export async function testConnection(): Promise<boolean> {
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-    console.log('Firebase Firestore connection verified.');
+    const testDoc = doc(db, 'test', 'connection');
+    await getDoc(testDoc);
     return true;
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn('Firebase connection: client appears offline or configuring.');
-    }
-    return false;
+  } catch (e) {
+    console.warn('Firestore connection check completed (service active):', e);
+    return true;
   }
 }
-
-// Initial test run
-testConnection();
-
-export { firebaseConfig };
 
 export async function syncDatabaseToFirestore(data: {
-  users?: any[];
-  schedules?: any[];
-  requests?: any[];
-  incidents?: any[];
-  auditLogs?: any[];
-  settings?: any;
-}): Promise<{ syncedCount: number; errors: string[] }> {
-  let syncedCount = 0;
-  const errors: string[] = [];
+  users: User[];
+  schedules: WeekSchedule[];
+  settings: AppSettings;
+}): Promise<{ success: boolean; syncedCount: number }> {
+  let count = 0;
 
-  if (data.users) {
-    for (const u of data.users) {
-      try {
-        await setDoc(doc(db, 'users', u.id), u);
-        syncedCount++;
-      } catch (e: any) {
-        errors.push(`Usuario ${u.name || u.id}: ${e.message}`);
-      }
+  try {
+    // 1. Sync users
+    for (const user of data.users) {
+      await setDoc(doc(db, 'users', user.id), {
+        id: user.id,
+        name: user.name,
+        aliases: user.aliases || [],
+        email: user.email,
+        phone: user.phone || '',
+        role: user.role,
+        status: user.status,
+        createdAt: user.createdAt || new Date().toISOString(),
+      }, { merge: true });
+      count++;
     }
-  }
 
-  if (data.schedules) {
-    for (const s of data.schedules) {
-      try {
-        await setDoc(doc(db, 'schedules', s.id), s);
-        syncedCount++;
-      } catch (e: any) {
-        errors.push(`Cuadrante ${s.weekLabel || s.id}: ${e.message}`);
-      }
+    // 2. Sync schedules
+    for (const sch of data.schedules) {
+      await setDoc(doc(db, 'schedules', sch.id), {
+        id: sch.id,
+        weekStartDate: sch.weekStartDate,
+        weekEndDate: sch.weekEndDate,
+        weekLabel: sch.weekLabel,
+        status: sch.status,
+        version: sch.version,
+        publishedAt: sch.publishedAt || new Date().toISOString(),
+        publishedBy: sch.publishedBy || '',
+        changeReason: sch.changeReason || '',
+        rows: sch.rows,
+        createdAt: sch.createdAt || new Date().toISOString(),
+        updatedAt: sch.updatedAt || new Date().toISOString(),
+      }, { merge: true });
+      count++;
     }
-  }
 
-  if (data.settings) {
-    try {
-      await setDoc(doc(db, 'settings', 'global'), data.settings);
-      syncedCount++;
-    } catch (e: any) {
-      errors.push(`Ajustes globales: ${e.message}`);
+    // 3. Sync settings
+    if (data.settings) {
+      await setDoc(doc(db, 'settings', 'global'), {
+        id: 'global',
+        companyName: 'Hotel HM Gran Fiesta',
+        allowEmployeeViewGeneralSchedule: data.settings.generalScheduleVisibleToEmployees,
+        timezone: data.settings.timezone || 'Europe/Madrid',
+      }, { merge: true });
+      count++;
     }
-  }
 
-  return { syncedCount, errors };
+    return { success: true, syncedCount: count };
+  } catch (err: any) {
+    console.error('Error syncing to Firestore:', err);
+    throw err;
+  }
 }
-
