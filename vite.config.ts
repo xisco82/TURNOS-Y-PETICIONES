@@ -14,9 +14,9 @@ export default defineConfig(() => {
         includeAssets: ['icon.svg', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
         manifest: {
           id: '/',
-          name: 'TurnoFácil - Gestión de Turnos y Solicitudes',
-          short_name: 'TurnoFácil',
-          description: 'Gestión de cuadrantes semanales, turnos de trabajo y solicitudes para administradores y empleados.',
+          name: 'Hotel HM Gran Fiesta - Gestión de Turnos y Solicitudes',
+          short_name: 'HM Gran Fiesta',
+          description: 'Gestión de cuadrantes semanales, turnos de trabajo y solicitudes de Hotel HM Gran Fiesta.',
           theme_color: '#1e293b',
           background_color: '#f8fafc',
           display: 'standalone',

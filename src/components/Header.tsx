@@ -16,6 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import { PWAInstallButton } from './PWAInstallButton';
 import { NotificationItem } from '../types';
 import { api } from '../services/api';
+import { APP_BRAND } from '../constants/branding';
 
 interface HeaderProps {
   activeTab: string;
@@ -88,18 +89,25 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center justify-between h-16">
           {/* Logo & Brand */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-slate-900 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
-              <CalendarDays className="w-5 h-5" />
+            <div className="relative w-11 h-11 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1 shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
+              <img
+                src={APP_BRAND.logoUrl}
+                alt={APP_BRAND.name}
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = APP_BRAND.localLogoUrl;
+                }}
+              />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-lg text-slate-900 dark:text-white tracking-tight">TurnoFácil</span>
+                <span className="font-bold text-lg text-slate-900 dark:text-white tracking-tight">{APP_BRAND.name}</span>
                 <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded-sm bg-indigo-50 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/60">
                   {isAdmin ? 'Admin' : 'Empleado'}
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">
-                Gestión de Cuadrantes y Solicitudes
+                {APP_BRAND.subtitle}
               </p>
             </div>
           </div>

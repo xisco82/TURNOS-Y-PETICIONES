@@ -362,8 +362,8 @@ function sendNotification(
   const emailEntry = {
     id: `email-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
     to: targetEmail,
-    subject: `Novedad en TurnoFácil: ${title}`,
-    body: `Hola,\n\nTienes una novedad en la aplicación: ${title}.\n\nPor favor, entra a la app para revisar los detalles.\n\nAtentamente,\nTurnoFácil`,
+    subject: `Novedad en Hotel HM Gran Fiesta: ${title}`,
+    body: `Hola,\n\nTienes una novedad en la aplicación de Hotel HM Gran Fiesta: ${title}.\n\nPor favor, entra a la app para revisar los detalles.\n\nAtentamente,\nHotel HM Gran Fiesta`,
     date: new Date().toISOString(),
   };
   db.sentEmails.unshift(emailEntry);
@@ -1411,7 +1411,7 @@ async function startServer() {
   }
 
   httpServer.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 TurnoFácil server running on http://localhost:${PORT}`);
+    console.log(`🚀 Hotel HM Gran Fiesta server running on http://localhost:${PORT}`);
   });
 }
 
