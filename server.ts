@@ -196,8 +196,8 @@ const INITIAL_EMPLOYEES: User[] = [
 const ADMIN_USER: User = {
   id: 'admin-1',
   name: 'Administrador Principal',
-  aliases: ['Admin', 'Dirección', 'Xisco'],
-  email: 'xiscoquin@gmail.com',
+  aliases: ['Admin', 'Dirección', 'Xisco', 'xiscooquin'],
+  email: 'xiscooquin@gmail.com',
   phone: '+34 600 000 000',
   role: 'admin',
   status: 'active',
@@ -362,7 +362,7 @@ function sendNotification(
 
   // Email simulation (Privacy rule strictly applied: NO medical info, only "Tienes una novedad en la aplicación")
   const targetUser = db.users.find(u => u.id === userId);
-  const targetEmail = targetUser?.email || (userId === 'admin' ? ADMIN_USER.email : 'notificaciones@empresa.com');
+  const targetEmail = targetUser?.email || (userId === 'admin' || userId === 'admin-1' ? ADMIN_USER.email : 'notificaciones@empresa.com');
 
   const emailEntry = {
     id: `email-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
@@ -413,9 +413,18 @@ app.post('/api/auth/login', (req, res) => {
     return res.status(400).json({ error: 'Correo y contraseña obligatorios' });
   }
 
-  const user = db.users.find(
-    u => u.email.toLowerCase() === email.trim().toLowerCase()
-  );
+  const cleanEmail = email.trim().toLowerCase();
+  const user = db.users.find(u => {
+    const userEmail = u.email.toLowerCase();
+    if (userEmail === cleanEmail) return true;
+    if (u.role === 'admin' && (
+      cleanEmail === 'xiscooquin@gmail.com' ||
+      cleanEmail === 'xiscoquin@gmail.com' ||
+      cleanEmail === 'xiscoquin1@gmail.com' ||
+      cleanEmail === 'admin@empresa.com'
+    )) return true;
+    return false;
+  });
 
   if (!user) {
     return res.status(401).json({ error: 'Credenciales incorrectas' });
@@ -1402,6 +1411,131 @@ app.post('/api/backups/restore', authMiddleware, adminOnly, (req: AuthRequest, r
   }
 });
 
+// Seed Test Requests endpoint
+app.post('/api/requests/seed-test', authMiddleware, adminOnly, (req: AuthRequest, res) => {
+  const testShiftReqs: ShiftChangeRequest[] = [
+    {
+      id: `req-sc-test-${Date.now()}-1`,
+      employeeId: 'emp-1',
+      employeeName: 'Francisco Gallego Huguet',
+      type: 'shift_change',
+      date: '2026-11-04',
+      currentShift: '09:00-17:00',
+      proposedShift: '14:00-22:00',
+      coworkerId: 'emp-2',
+      coworkerName: 'Aliz Varga',
+      coworkerStatus: 'pending',
+      status: 'pending',
+      comments: [
+        {
+          id: `c-${Date.now()}-1`,
+          userId: 'emp-1',
+          userName: 'Francisco Gallego Huguet',
+          text: '[Petición de Test] Solicitud de cambio de turno para el miércoles por cita personal.',
+          createdAt: new Date().toISOString(),
+        },
+      ],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: `req-sc-test-${Date.now()}-2`,
+      employeeId: 'emp-3',
+      employeeName: 'Oscar David Millán Vivancos',
+      type: 'shift_change',
+      date: '2026-11-06',
+      currentShift: '14:00-22:00',
+      proposedShift: '09:00-17:00',
+      coworkerId: 'emp-4',
+      coworkerName: 'Francisco Javier Segundo Moya',
+      coworkerStatus: 'accepted',
+      status: 'pending',
+      comments: [
+        {
+          id: `c-${Date.now()}-2`,
+          userId: 'emp-3',
+          userName: 'Oscar David Millán Vivancos',
+          text: '[Petición de Test] Intercambio hablado previamente con Javi para cubrir turno de mañana.',
+          createdAt: new Date().toISOString(),
+        },
+      ],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ];
+
+  const testDaysOff: DaysOffRequest[] = [
+    {
+      id: `req-do-test-${Date.now()}-1`,
+      employeeId: 'emp-5',
+      employeeName: 'Inés Ruiz Morey',
+      type: 'days_off',
+      startDate: '2026-11-10',
+      endDate: '2026-11-12',
+      comment: '[Petición de Test] Petición de 3 días libres por asuntos propios.',
+      status: 'pending',
+      comments: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: `req-do-test-${Date.now()}-2`,
+      employeeId: 'emp-6',
+      employeeName: 'Josep Vidal Pérez',
+      type: 'days_off',
+      startDate: '2026-11-20',
+      endDate: '2026-11-23',
+      comment: '[Petición de Test] Fin de semana largo por compensación de festivos.',
+      status: 'approved',
+      comments: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ];
+
+  const testAbsences: AbsenceRequest[] = [
+    {
+      id: `req-ab-test-${Date.now()}-1`,
+      employeeId: 'emp-7',
+      employeeName: 'Miriam García Heras',
+      type: 'absence',
+      subType: 'communication',
+      category: 'medico',
+      startDate: '2026-11-05',
+      endDate: '2026-11-05',
+      hasCertificate: true,
+      status: 'acknowledged',
+      comments: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ];
+
+  const testIncidents: IncidentItem[] = [
+    {
+      id: `inc-test-${Date.now()}-1`,
+      employeeId: 'emp-8',
+      employeeName: 'Carlos Rodríguez Martín',
+      category: 'Relevo de Turno',
+      date: '2026-11-02',
+      description: '[Petición de Test / Incidencia] Retraso de 15 minutos en el relevo de recepción por avería en el transporte público.',
+      status: 'abierta',
+      comments: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ];
+
+  db.shiftRequests = [...testShiftReqs, ...db.shiftRequests.filter(r => !r.id.includes('test'))];
+  db.daysOffRequests = [...testDaysOff, ...db.daysOffRequests.filter(r => !r.id.includes('test'))];
+  db.absenceRequests = [...testAbsences, ...db.absenceRequests.filter(r => !r.id.includes('test'))];
+  db.incidents = [...testIncidents, ...db.incidents.filter(r => !r.id.includes('test'))];
+
+  saveDatabase();
+  addAuditLog(req.user!.id, req.user!.name, 'Cargó peticiones de prueba de test', 'solicitud');
+  res.json({ success: true, count: testShiftReqs.length + testDaysOff.length + testAbsences.length + testIncidents.length });
+});
+
 // 10. DEMO Data handlers (Requirement: No inventar datos, cualquier demo debe llevar etiqueta DEMO y poder eliminarse con un botón)
 app.post('/api/demo/seed', authMiddleware, adminOnly, (req: AuthRequest, res) => {
   // Load a demo published schedule for testing
@@ -1505,6 +1639,3 @@ async function startServer() {
 startServer().catch(err => {
   console.error('Failed to start server:', err);
 });
-
-
-

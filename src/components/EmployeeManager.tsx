@@ -557,6 +557,3 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
     </div>
   );
 };
-
-
-

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { WeekSchedule, ShiftChangeRequest, DaysOffRequest, AbsenceRequest, IncidentItem, User } from '../types';
+import { DatabaseSyncIndicator } from './DatabaseSyncIndicator';
 
 interface Props {
   onNavigate: (tab: string) => void;
@@ -99,6 +100,9 @@ export const AdminDashboard: React.FC<Props> = ({ onNavigate, employees }) => {
         {/* Decorative background glow */}
         <div className="absolute right-0 top-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
       </div>
+
+      {/* Database Synchronization Status Card */}
+      <DatabaseSyncIndicator variant="card" />
 
       {/* Operational Counters (Section 8) */}
       <div>
@@ -290,6 +294,3 @@ export const AdminDashboard: React.FC<Props> = ({ onNavigate, employees }) => {
     </div>
   );
 };
-
-
-

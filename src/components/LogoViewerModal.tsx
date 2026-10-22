@@ -271,6 +271,3 @@ export const LogoViewerModal: React.FC<LogoViewerModalProps> = ({ isOpen, onClos
     </div>
   );
 };
-
-
-

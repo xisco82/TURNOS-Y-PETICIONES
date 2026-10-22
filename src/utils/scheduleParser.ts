@@ -1,424 +1,376 @@
-import { User, ParseResult, EmployeeScheduleRow, ShiftDetail, AmbiguityMatch, ShiftType } from '../types';
+import { User, EmployeeScheduleRow, ShiftDetail, ParseResult, AmbiguityItem } from '../types';
 
 export function getWeekDates(weekStartDate: string): string[] {
   const dates: string[] = [];
-  const parts = weekStartDate.split('-').map(Number);
-  const start = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], 12, 0, 0));
+  const [year, month, day] = weekStartDate.split('-').map(Number);
+  const base = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
 
   for (let i = 0; i < 7; i++) {
-    const d = new Date(start);
-    d.setUTCDate(start.getUTCDate() + i);
-    dates.push(d.toISOString().split('T')[0]);
+    const d = new Date(base.getTime() + i * 24 * 60 * 60 * 1000);
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const dayStr = String(d.getUTCDate()).padStart(2, '0');
+    dates.push(`${y}-${m}-${dayStr}`);
   }
   return dates;
 }
 
-export function formatDaySpanish(dateStr: string): {
-  dayName: string;
-  dayNumber: number;
-  monthName: string;
-  year: number;
-} {
-  const parts = dateStr.split('-').map(Number);
-  const d = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], 12, 0, 0));
+const SPANISH_DAYS = ['DOMINGO', 'LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
+const SPANISH_MONTHS = [
+  'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+  'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
+];
 
-  const dayNames = ['DOMINGO', 'LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
-  const monthNames = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
-  ];
+export function formatDaySpanish(dateStr: string) {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const d = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  const dayOfWeek = d.getUTCDay();
 
   return {
-    dayName: dayNames[d.getUTCDay()],
-    dayNumber: d.getUTCDate(),
-    monthName: monthNames[d.getUTCMonth()],
-    year: d.getUTCFullYear(),
+    dayName: SPANISH_DAYS[dayOfWeek],
+    dayNumber: day,
+    monthName: SPANISH_MONTHS[month - 1],
+    year,
   };
 }
 
-export function normalizeStr(str: string): string {
-  return str
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim();
-}
-
-export function matchEmployee(
-  rawName: string,
-  employees: User[]
-): {
-  employee?: User;
-  ambiguous?: User[];
-} | null {
-  const cleanRaw = normalizeStr(rawName);
-  if (!cleanRaw) return null;
-
-  // Exact full name match
-  const exactMatch = employees.find(
-    e => normalizeStr(e.name) === cleanRaw
-  );
-  if (exactMatch) {
-    return { employee: exactMatch };
-  }
-
-  // Exact alias match
-  const exactAliasMatches = employees.filter(e =>
-    e.aliases.some(a => normalizeStr(a) === cleanRaw)
-  );
-  if (exactAliasMatches.length === 1) {
-    return { employee: exactAliasMatches[0] };
-  }
-  if (exactAliasMatches.length > 1) {
-    return { ambiguous: exactAliasMatches };
-  }
-
-  // Prefix / substring match
-  const matched = employees.filter(e => {
-    const empNorm = normalizeStr(e.name);
-    if (empNorm.includes(cleanRaw) || cleanRaw.includes(empNorm)) return true;
-    return e.aliases.some(a => {
-      const aNorm = normalizeStr(a);
-      return aNorm.includes(cleanRaw) || cleanRaw.includes(aNorm);
-    });
-  });
-
-  if (matched.length === 1) {
-    return { employee: matched[0] };
-  }
-  if (matched.length > 1) {
-    return { ambiguous: matched };
-  }
-
-  return null;
-}
-
-export function calculateShiftHours(
-  dateStr: string,
-  startTime: string,
-  endTime: string
-): { hours: number; isOvernight: boolean } {
+export function calculateShiftHours(dateStr: string, startTime: string, endTime: string): { hours: number; isOvernight: boolean } {
   const [sh, sm] = startTime.split(':').map(Number);
   const [eh, em] = endTime.split(':').map(Number);
 
-  const startMinutes = sh * 60 + sm;
-  let endMinutes = eh * 60 + em;
-  const isOvernight = endMinutes <= startMinutes;
+  const startMins = sh * 60 + sm;
+  let endMins = eh * 60 + em;
+  const isOvernight = endMins <= startMins;
 
   if (isOvernight) {
-    endMinutes += 24 * 60;
+    endMins += 24 * 60;
   }
 
-  let totalMinutes = endMinutes - startMinutes;
+  let totalHours = (endMins - startMins) / 60;
 
-  // Daylight Saving Time (DST) Check for Europe/Madrid
-  // Fall DST in Spain occurs on the last Sunday of October (clocks go 03:00 -> 02:00, adding +1 hour)
-  // In 2026, the last Sunday is October 25th. A night shift starting Oct 24th and ending Oct 25th in the morning spans the extra hour!
-  if (dateStr === '2026-10-24' && isOvernight && sh <= 23 && eh >= 3) {
-    totalMinutes += 60; // Extra hour worked during change back
+  // DST Special Case (Spain / Europe/Madrid autumn change):
+  // Night from 24 to 25 October 2026: clocks are pushed back 1 hour (03:00 -> 02:00),
+  // adding 1 extra hour to night shifts!
+  if (
+    isOvernight &&
+    (dateStr === '2026-10-24' || dateStr === '2026-10-25') &&
+    sh >= 21 &&
+    eh <= 8
+  ) {
+    totalHours += 1;
   }
 
-  const hours = Math.round((totalMinutes / 60) * 100) / 100;
-  return { hours, isOvernight };
+  return {
+    hours: Math.round(totalHours * 100) / 100,
+    isOvernight,
+  };
 }
 
-export function parseShiftText(rawShift: string, dateStr: string): ShiftDetail | null {
-  const text = rawShift.trim();
-  if (!text) {
-    return { type: 'free', rawText: 'LIBRE', hours: 0 };
+export function parseShiftText(rawText: string, dateStr: string): ShiftDetail | null {
+  const trimmed = rawText.trim();
+  if (!trimmed) return null;
+
+  const upper = trimmed.toUpperCase();
+
+  // Codes
+  if (upper === 'L' || upper === 'LIBRE' || upper === 'DESC' || upper === 'DESCANSO') {
+    return { type: 'free', rawText: trimmed, hours: 0 };
+  }
+  if (upper === 'V' || upper === 'VAC' || upper === 'VACACIONES') {
+    return { type: 'vacation', rawText: trimmed, hours: 0 };
+  }
+  if (upper === 'BP' || upper === 'BAJA' || upper === 'MEDICO' || upper === 'MÉDICO' || upper === 'IT') {
+    return { type: 'sick', rawText: trimmed, hours: 0 };
+  }
+  if (upper === 'FESTIVO' || upper === 'FEST') {
+    return { type: 'holiday', rawText: trimmed, hours: 0 };
+  }
+  if (upper === 'M' || upper === 'MAÑANA' || upper === 'MANANA') {
+    return { type: 'work', startTime: '07:00', endTime: '15:00', rawText: trimmed, hours: 8 };
+  }
+  if (upper === 'T' || upper === 'TARDE') {
+    return { type: 'work', startTime: '15:00', endTime: '23:00', rawText: trimmed, hours: 8 };
+  }
+  if (upper === 'N' || upper === 'NOCHE') {
+    const calc = calculateShiftHours(dateStr, '23:00', '07:00');
+    return { type: 'work', startTime: '23:00', endTime: '07:00', rawText: trimmed, hours: calc.hours, isOvernight: true };
   }
 
-  const norm = normalizeStr(text);
+  // Split shift: e.g. "09:00-13:00 / 17:00-21:00" or "09:00-13:00/17:00-21:00"
+  if (trimmed.includes('/')) {
+    const parts = trimmed.split('/');
+    let totalSplitHours = 0;
+    let hasOvernight = false;
 
-  // Free / Rest
-  if (['libre', 'l', 'descanso', 'desc', 'd', 'off', '-'].includes(norm)) {
-    return { type: 'free', rawText: text.toUpperCase() === 'L' ? 'L' : 'LIBRE', hours: 0 };
-  }
-
-  // Vacation
-  if (['vacaciones', 'vac', 'v'].includes(norm)) {
-    return { type: 'vacation', rawText: text.toUpperCase() === 'V' ? 'V' : 'VACACIONES', hours: 0 };
-  }
-
-  // Sick Leave / Baja médica
-  if (['baja', 'baja medica', 'bp', 'it', 'enfermedad', 'medico'].includes(norm)) {
-    return { type: 'sick', rawText: text.toUpperCase() === 'BP' ? 'BP' : 'BAJA', hours: 0 };
-  }
-
-  // Holiday / Festivo
-  if (['festivo', 'fest', 'f'].includes(norm)) {
-    return { type: 'holiday', rawText: 'FESTIVO', hours: 0 };
-  }
-
-  // Preset Shift Codes (Hotelería HM Gran Fiesta: M, T, N)
-  if (norm === 'm' || norm === 'manana' || norm === 'mañana') {
-    return { type: 'work', rawText: 'M', hours: 8, startTime: '09:00', endTime: '17:00' };
-  }
-  if (norm === 't' || norm === 'tarde') {
-    return { type: 'work', rawText: 'T', hours: 8, startTime: '14:00', endTime: '22:00' };
-  }
-  if (norm === 'n' || norm === 'noche') {
-    return { type: 'work', rawText: 'N', hours: 8, startTime: '22:00', endTime: '06:00', isOvernight: true };
-  }
-
-  // Split shift: e.g. "09:00-13:00 / 17:00-21:00" or "09:00-13:00 y 17:00-21:00"
-  if (text.includes('/') || text.includes(' y ') || text.includes(' + ')) {
-    const parts = text.split(/[/+y]/).map(s => s.trim()).filter(Boolean);
-    let totalH = 0;
-    for (const p of parts) {
-      const parsedPart = parseShiftText(p, dateStr);
-      if (parsedPart && parsedPart.hours) {
-        totalH += parsedPart.hours;
+    for (const part of parts) {
+      const match = part.trim().match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/);
+      if (match) {
+        const c = calculateShiftHours(dateStr, match[1], match[2]);
+        totalSplitHours += c.hours;
+        if (c.isOvernight) hasOvernight = true;
       }
     }
-    return {
-      type: 'work',
-      rawText: text,
-      hours: Math.round(totalH * 100) / 100,
-      isSplit: true,
-    };
+
+    if (totalSplitHours > 0) {
+      return {
+        type: 'work',
+        rawText: trimmed,
+        hours: Math.round(totalSplitHours * 100) / 100,
+        isSplit: true,
+        isOvernight: hasOvernight,
+      };
+    }
   }
 
-  // Exact hour range: e.g. "09:00-17:00", "9:00 a 17:00", "09:00 - 17:00"
-  const rangeMatch = text.match(/(\d{1,2}:\d{2})\s*(?:-|a|al|to)\s*(\d{1,2}:\d{2})/i);
+  // Single time range: e.g. "09:00-17:00" or "09:00 - 17:00"
+  const rangeMatch = trimmed.match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/);
   if (rangeMatch) {
-    const startTime = rangeMatch[1].padStart(5, '0');
-    const endTime = rangeMatch[2].padStart(5, '0');
-    const calc = calculateShiftHours(dateStr, startTime, endTime);
+    const calc = calculateShiftHours(dateStr, rangeMatch[1], rangeMatch[2]);
     return {
       type: 'work',
-      startTime,
-      endTime,
-      rawText: text,
+      startTime: rangeMatch[1],
+      endTime: rangeMatch[2],
+      rawText: trimmed,
       hours: calc.hours,
       isOvernight: calc.isOvernight,
     };
   }
 
-  // Single hour count: e.g. "8h", "8 horas"
-  const hoursOnlyMatch = text.match(/^(\d+(?:[.,]\d+)?)\s*h(?:oras)?$/i);
-  if (hoursOnlyMatch) {
-    const h = parseFloat(hoursOnlyMatch[1].replace(',', '.'));
-    return { type: 'work', rawText: text, hours: h };
-  }
-
-  // Fallback for unparseable text
+  // Default fallback
   return {
-    type: 'other',
-    rawText: text,
+    type: 'work',
+    rawText: trimmed,
     hours: 8,
-    note: 'Turno no estándar',
   };
 }
 
+export function matchEmployee(
+  rawName: string,
+  employees: User[]
+): { employee?: User; ambiguous?: User[] } | null {
+  const clean = rawName.trim().toLowerCase();
+  if (!clean) return null;
+
+  // 1. Exact match by full name
+  const exact = employees.find(e => e.name.toLowerCase() === clean);
+  if (exact) return { employee: exact };
+
+  // 2. Exact match in aliases
+  const exactAlias = employees.filter(e =>
+    e.aliases.some(a => a.toLowerCase() === clean)
+  );
+  if (exactAlias.length === 1) return { employee: exactAlias[0] };
+  if (exactAlias.length > 1) return { ambiguous: exactAlias };
+
+  // 3. Partial / word match (e.g. "Oscar David" or "Francisco")
+  const matches = employees.filter(e => {
+    const fullNameLower = e.name.toLowerCase();
+    if (fullNameLower.includes(clean)) return true;
+    return e.aliases.some(a => a.toLowerCase().includes(clean) || clean.includes(a.toLowerCase()));
+  });
+
+  if (matches.length === 1) return { employee: matches[0] };
+  if (matches.length > 1) return { ambiguous: matches };
+
+  return null;
+}
+
 export function parseScheduleInput(
-  rawInput: string,
+  inputText: string,
   employees: User[],
-  defaultWeekStartDate?: string
+  fallbackStartDate?: string
 ): ParseResult {
   const errors: string[] = [];
   const warnings: string[] = [];
-  const ambiguities: AmbiguityMatch[] = [];
-  const unknownEmployees: string[] = [];
+  const ambiguities: AmbiguityItem[] = [];
+  const unknownSet = new Set<string>();
 
-  const lines = rawInput
-    .split(/\r?\n/)
+  const lines = inputText
+    .split('\n')
     .map(l => l.trim())
     .filter(Boolean);
 
-  let weekStartDate = defaultWeekStartDate || '';
-  let weekEndDate = '';
-  let weekLabel = '';
+  let weekStartDate = fallbackStartDate || '2026-11-02';
+  let weekEndDate = '2026-11-08';
+  let weekLabel = 'SEMANA DEL 2 AL 8 DE NOVIEMBRE 2026';
 
-  // 1. Detect week from text or header
-  // Example: "SEMANA DEL 2 AL 8 DE NOVIEMBRE" or "SEMANA DEL 28 DE DICIEMBRE AL 3 DE ENERO DE 2027"
-  const firstLines = lines.slice(0, 3).join(' ');
-  const weekRangeMatch = firstLines.match(/SEMANA DEL\s+(\d{1,2})(?:\s+DE\s+([A-Za-z]+))?\s+AL\s+(\d{1,2})\s+DE\s+([A-Za-z]+)(?:\s+DE\s+(\d{4}))?/i);
+  // Check header for week label / date hints
+  const headerText = lines.slice(0, 3).join(' ');
+  const weekMatch = headerText.match(/SEMANA\s+DEL\s+(\d{1,2})(?:\s+DE\s+([A-ZÁÉÍÓÚ]+))?\s+AL\s+(\d{1,2})\s+DE\s+([A-ZÁÉÍÓÚ]+)(?:\s+(?:DE\s+)?(\d{4}))?/i);
 
-  const monthsMap: Record<string, number> = {
-    enero: 1, febrero: 2, marzo: 3, abril: 4, mayo: 5, junio: 6,
-    julio: 7, agosto: 8, septiembre: 9, octubre: 10, noviembre: 11, diciembre: 12,
-  };
+  if (weekMatch) {
+    const startDay = parseInt(weekMatch[1], 10);
+    const startMonthName = weekMatch[2] ? weekMatch[2].toUpperCase() : weekMatch[4].toUpperCase();
+    const endDay = parseInt(weekMatch[3], 10);
+    const endMonthName = weekMatch[4].toUpperCase();
+    const year = weekMatch[5] ? parseInt(weekMatch[5], 10) : 2026;
 
-  if (weekRangeMatch) {
-    const startDay = parseInt(weekRangeMatch[1], 10);
-    const endMonthName = normalizeStr(weekRangeMatch[4]);
-    const startMonthName = weekRangeMatch[2] ? normalizeStr(weekRangeMatch[2]) : endMonthName;
-    const year = weekRangeMatch[5] ? parseInt(weekRangeMatch[5], 10) : 2026;
+    const startMonthIdx = SPANISH_MONTHS.indexOf(startMonthName);
+    const endMonthIdx = SPANISH_MONTHS.indexOf(endMonthName);
 
-    const startMonth = monthsMap[startMonthName] || 11;
-    let endMonth = monthsMap[endMonthName] || 11;
-    let endYear = year;
-
-    // Cross-year check (e.g. 28 December to 3 January)
-    if (startMonth === 12 && endMonth === 1) {
-      endYear = year + 1;
-    }
-
-    weekStartDate = `${year}-${String(startMonth).padStart(2, '0')}-${String(startDay).padStart(2, '0')}`;
-    const endDay = parseInt(weekRangeMatch[3], 10);
-    weekEndDate = `${endYear}-${String(endMonth).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
-    weekLabel = `SEMANA DEL ${startDay} ${weekRangeMatch[2] ? `DE ${weekRangeMatch[2].toUpperCase()} ` : ''}AL ${endDay} DE ${weekRangeMatch[4].toUpperCase()} ${year}`;
-  }
-
-  // Also check for Google Sheets date header line: e.g. "\t26/10\t27/10\t28/10\t29/10\t30/10\t31/10\t01/11"
-  if (!weekStartDate) {
-    for (const line of lines) {
-      const dateTokens = line.split('\t').map(t => t.trim()).filter(t => /^\d{1,2}\/\d{1,2}$/.test(t));
-      if (dateTokens.length >= 7) {
-        const [d1, m1] = dateTokens[0].split('/').map(Number);
-        const [d7, m7] = dateTokens[6].split('/').map(Number);
-        const y = 2026;
-        weekStartDate = `${y}-${String(m1).padStart(2, '0')}-${String(d1).padStart(2, '0')}`;
-        weekEndDate = `${m1 === 12 && m7 === 1 ? y + 1 : y}-${String(m7).padStart(2, '0')}-${String(d7).padStart(2, '0')}`;
-        weekLabel = `SEMANA DEL ${d1}/${m1} AL ${d7}/${m7} DE ${y}`;
-        break;
+    if (startMonthIdx !== -1 && endMonthIdx !== -1) {
+      let startYear = year;
+      // Cross year check: Dec to Jan
+      if (startMonthIdx === 11 && endMonthIdx === 0) {
+        startYear = year - 1;
       }
+      weekStartDate = `${startYear}-${String(startMonthIdx + 1).padStart(2, '0')}-${String(startDay).padStart(2, '0')}`;
+      weekEndDate = `${year}-${String(endMonthIdx + 1).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
+      weekLabel = `SEMANA DEL ${startDay} DE ${startMonthName} AL ${endDay} DE ${endMonthName} DE ${year}`;
     }
   }
 
-  // Fallback default
-  if (!weekStartDate) {
-    weekStartDate = defaultWeekStartDate || '2026-11-02';
-  }
-  const dates = getWeekDates(weekStartDate);
-  if (!weekEndDate) {
-    weekEndDate = dates[6];
-  }
-  if (!weekLabel) {
-    const f1 = formatDaySpanish(dates[0]);
-    const f7 = formatDaySpanish(dates[6]);
-    weekLabel = `SEMANA DEL ${f1.dayNumber} DE ${f1.monthName.toUpperCase()} AL ${f7.dayNumber} DE ${f7.monthName.toUpperCase()} DE ${f1.year}`;
+  // Check date header in TSV/Excel, e.g. "26/10\t27/10...\t01/11"
+  for (const line of lines.slice(0, 3)) {
+    const dateMatches = line.match(/\b(\d{1,2})\/(\d{1,2})\b/g);
+    if (dateMatches && dateMatches.length >= 7) {
+      const [d1, m1] = dateMatches[0].split('/').map(Number);
+      const [d7, m7] = dateMatches[6].split('/').map(Number);
+      const year = 2026;
+      weekStartDate = `${year}-${String(m1).padStart(2, '0')}-${String(d1).padStart(2, '0')}`;
+      weekEndDate = `${year}-${String(m7).padStart(2, '0')}-${String(d7).padStart(2, '0')}`;
+      weekLabel = `SEMANA DEL ${d1}/${m1} AL ${d7}/${m7} DE ${year}`;
+      break;
+    }
   }
 
+  const weekDates = getWeekDates(weekStartDate);
   const rows: EmployeeScheduleRow[] = [];
 
-  // Parse lines
   for (const line of lines) {
-    // Ignore pure title lines or header rows
-    const normLine = normalizeStr(line);
+    // Skip general header lines
     if (
-      normLine.startsWith('semana del') ||
-      normLine.startsWith('cuadrante') ||
-      normLine.startsWith('horario')
+      line.toUpperCase().includes('SEMANA DEL') ||
+      line.toUpperCase().includes('LUNES\tMARTES') ||
+      line.toUpperCase().startsWith('EMPLEADO\t')
     ) {
       continue;
     }
 
-    // Check if line is a table header: e.g. "Lunes\tMartes..." or "Empleado\tLunes..."
-    const tokens = line.split('\t').map(t => t.trim());
-    const isHeader = tokens.some(t => {
-      const nt = normalizeStr(t);
-      return ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo', 'empleado'].includes(nt);
-    });
-    if (isHeader) continue;
-
-    // Check if line contains only dates: e.g. "\t26/10\t27/10..."
-    if (tokens.filter(t => /^\d{1,2}\/\d{1,2}$/.test(t)).length >= 5) {
-      continue;
-    }
-
-    let rawEmployeeName = '';
-    let dayValues: string[] = [];
-
-    // Case 1: Tab-delimited (Excel / Google Sheets)
+    // Check if line contains tabs (Excel format)
     if (line.includes('\t')) {
-      const parts = line.split('\t').map(t => t.trim());
-      // First non-empty token is employee name
-      const firstIdx = parts.findIndex(p => p.length > 0);
-      if (firstIdx !== -1) {
-        rawEmployeeName = parts[firstIdx];
-        dayValues = parts.slice(firstIdx + 1, firstIdx + 8);
+      const parts = line.split('\t').map(p => p.trim());
+      const rawEmpName = parts[0];
+      if (!rawEmpName) continue;
+
+      const matchRes = matchEmployee(rawEmpName, employees);
+      if (!matchRes) {
+        unknownSet.add(rawEmpName);
+        errors.push(`Empleado no reconocido: «${rawEmpName}»`);
+        continue;
       }
-    }
-    // Case 2: Colon-delimited format: "Francisco Gallego: Lunes: 09:00-17:00 Martes: ..."
-    else if (line.includes(':')) {
-      const colonIdx = line.indexOf(':');
-      rawEmployeeName = line.substring(0, colonIdx).trim();
-      const rest = line.substring(colonIdx + 1).trim();
 
-      // Split days: Lunes: ..., Martes: ..., etc.
-      const dayMatches = [
-        ...rest.matchAll(/(?:Lunes|Martes|Miércoles|Miercoles|Jueves|Viernes|Sábado|Sabado|Domingo)\s*:\s*([^:]+?)(?=\s+(?:Lunes|Martes|Miércoles|Miercoles|Jueves|Viernes|Sábado|Sabado|Domingo)\s*:|$)/gi)
-      ];
-
-      if (dayMatches.length > 0) {
-        dayValues = dayMatches.map(m => m[1].trim());
-      } else {
-        // Simple comma or space separation
-        dayValues = rest.split(/[,;]/).map(s => s.trim());
+      if (matchRes.ambiguous) {
+        ambiguities.push({ rawName: rawEmpName, matchedEmployees: matchRes.ambiguous });
+        errors.push(`Nombre ambiguo «${rawEmpName}». Coincide con varios empleados.`);
+        continue;
       }
-    }
 
-    if (!rawEmployeeName) continue;
+      const emp = matchRes.employee!;
+      const days: Record<string, ShiftDetail> = {};
+      let totalH = 0;
+      const rowWarnings: string[] = [];
 
-    // Match employee
-    const match = matchEmployee(rawEmployeeName, employees);
+      // Next 7 columns are Monday to Sunday
+      for (let i = 0; i < 7; i++) {
+        const dateStr = weekDates[i];
+        const shiftText = parts[i + 1] || 'LIBRE';
+        const shift = parseShiftText(shiftText, dateStr) || { type: 'free', rawText: 'LIBRE', hours: 0 };
+        days[dateStr] = shift;
+        totalH += shift.hours;
 
-    if (!match) {
-      errors.push(`Empleado desconocido: «${rawEmployeeName}». No coincide con ningún empleado ni alias.`);
-      if (!unknownEmployees.includes(rawEmployeeName)) {
-        unknownEmployees.push(rawEmployeeName);
+        if (shift.hours > 9) {
+          rowWarnings.push(`El ${dateStr} supera 9h ordinarias (${shift.hours}h).`);
+        }
       }
-      continue;
-    }
 
-    if (match.ambiguous) {
-      ambiguities.push({
-        rawName: rawEmployeeName,
-        matchedEmployees: match.ambiguous,
+      if (totalH > 40) {
+        rowWarnings.push(`Supera el máximo semanal de 40 horas (${totalH}h).`);
+      }
+
+      rows.push({
+        employeeId: emp.id,
+        employeeName: emp.name,
+        totalHours: Math.round(totalH * 100) / 100,
+        warnings: rowWarnings,
+        days,
       });
-      errors.push(
-        `Ambigüedad en «${rawEmployeeName}»: coincide con varios empleados (${match.ambiguous.map(e => e.name).join(', ')}). Debe asignarse manualmente.`
-      );
+
+      if (rowWarnings.length > 0) {
+        warnings.push(`${emp.name}: ${rowWarnings.join(' ')}`);
+      }
       continue;
     }
 
-    const emp = match.employee!;
+    // Text format: "Francisco Gallego: Lunes: 09:00-17:00 Martes: 09:00-17:00..."
+    if (line.includes(':')) {
+      const firstColon = line.indexOf(':');
+      const rawEmpName = line.slice(0, firstColon).trim();
+      const rest = line.slice(firstColon + 1).trim();
 
-    // Build 7-day shift map
-    const days: Record<string, ShiftDetail> = {};
-    let totalHours = 0;
-    const rowWarnings: string[] = [];
+      const matchRes = matchEmployee(rawEmpName, employees);
+      if (!matchRes) {
+        unknownSet.add(rawEmpName);
+        errors.push(`Empleado no reconocido: «${rawEmpName}»`);
+        continue;
+      }
 
-    for (let i = 0; i < 7; i++) {
-      const dateStr = dates[i];
-      const rawShift = dayValues[i] || 'LIBRE';
-      const parsed = parseShiftText(rawShift, dateStr) || { type: 'free', rawText: 'LIBRE', hours: 0 };
-      days[dateStr] = parsed;
-      totalHours += parsed.hours || 0;
+      if (matchRes.ambiguous) {
+        ambiguities.push({ rawName: rawEmpName, matchedEmployees: matchRes.ambiguous });
+        errors.push(`Nombre ambiguo «${rawEmpName}». Coincide con varios empleados.`);
+        continue;
+      }
 
-      // Check max daily hours warning (> 9h)
-      if (parsed.hours > 9) {
-        rowWarnings.push(`El ${formatDaySpanish(dateStr).dayName} supera las 9 horas ordinarias (${parsed.hours}h).`);
+      const emp = matchRes.employee!;
+      const days: Record<string, ShiftDetail> = {};
+      let totalH = 0;
+      const rowWarnings: string[] = [];
+
+      // Parse each day tokens e.g. Lunes: 09:00-17:00
+      const dayNames = ['LUNES', 'MARTES', 'MIÉRCOLES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SÁBADO', 'SABADO', 'DOMINGO'];
+      const pattern = new RegExp(`(${dayNames.join('|')}):\\s*([^:]+?)(?=(?:${dayNames.join('|')}):|$)`, 'gi');
+      let m: RegExpExecArray | null;
+      let dayIdx = 0;
+
+      while ((m = pattern.exec(rest)) !== null && dayIdx < 7) {
+        const shiftText = m[2].trim();
+        const dateStr = weekDates[dayIdx];
+        const shift = parseShiftText(shiftText, dateStr) || { type: 'free', rawText: 'LIBRE', hours: 0 };
+        days[dateStr] = shift;
+        totalH += shift.hours;
+
+        if (shift.hours > 9) {
+          rowWarnings.push(`El ${dateStr} supera 9h ordinarias (${shift.hours}h).`);
+        }
+        dayIdx++;
+      }
+
+      // If missing days, fill with LIBRE
+      while (dayIdx < 7) {
+        const dateStr = weekDates[dayIdx];
+        days[dateStr] = { type: 'free', rawText: 'LIBRE', hours: 0 };
+        dayIdx++;
+      }
+
+      if (totalH > 40) {
+        rowWarnings.push(`Supera el máximo semanal de 40 horas (${totalH}h).`);
+      }
+
+      rows.push({
+        employeeId: emp.id,
+        employeeName: emp.name,
+        totalHours: Math.round(totalH * 100) / 100,
+        warnings: rowWarnings,
+        days,
+      });
+
+      if (rowWarnings.length > 0) {
+        warnings.push(`${emp.name}: ${rowWarnings.join(' ')}`);
       }
     }
-
-    // Check max weekly hours warning (> 40h)
-    if (totalHours > 40) {
-      rowWarnings.push(`Supera las 40 horas semanales (${totalHours}h).`);
-    }
-
-    // Check rest days (< 1.5 rest days)
-    const restDaysCount = Object.values(days).filter(d => d.type === 'free' || d.type === 'rest').length;
-    if (restDaysCount < 1) {
-      rowWarnings.push(`Descanso semanal insuficiente (${restDaysCount} días libres).`);
-    }
-
-    if (rowWarnings.length > 0) {
-      warnings.push(`${emp.name}: ${rowWarnings.join(' ')}`);
-    }
-
-    rows.push({
-      employeeId: emp.id,
-      employeeName: emp.name,
-      days,
-      totalHours: Math.round(totalHours * 100) / 100,
-      warnings: rowWarnings,
-    });
   }
 
-  const success = errors.length === 0 && ambiguities.length === 0 && rows.length > 0;
+  const success = errors.length === 0 && rows.length > 0;
 
   return {
     success,
@@ -426,9 +378,9 @@ export function parseScheduleInput(
     weekEndDate,
     weekLabel,
     rows,
-    warnings,
     errors,
+    warnings,
     ambiguities,
-    unknownEmployees,
+    unknownEmployees: Array.from(unknownSet),
   };
 }

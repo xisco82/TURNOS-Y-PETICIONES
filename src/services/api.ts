@@ -10,181 +10,131 @@ import {
   AppSettings,
 } from '../types';
 
-const TOKEN_KEY = 'hm_gran_fiesta_auth_token';
+const TOKEN_KEY = 'hgranfiesta_auth_token';
 
-class ApiService {
-  private getHeaders(): HeadersInit {
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    };
-    const token = this.getToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    return headers;
+export const getStoredToken = (): string | null => {
+  return localStorage.getItem(TOKEN_KEY);
+};
+
+export const setStoredToken = (token: string | null) => {
+  if (token) {
+    localStorage.setItem(TOKEN_KEY, token);
+  } else {
+    localStorage.removeItem(TOKEN_KEY);
+  }
+};
+
+async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const token = getStoredToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>),
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
-  public getToken(): string | null {
-    try {
-      return localStorage.getItem(TOKEN_KEY);
-    } catch {
-      return null;
-    }
+  const response = await fetch(endpoint, {
+    ...options,
+    headers,
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.error || `Error en la petición (${response.status})`);
   }
 
-  public setToken(token: string | null): void {
-    try {
-      if (token) {
-        localStorage.setItem(TOKEN_KEY, token);
-      } else {
-        localStorage.removeItem(TOKEN_KEY);
-      }
-    } catch {
-      // Storage might not be available
-    }
-  }
+  return data as T;
+}
 
-  private async handleResponse<T>(res: Response): Promise<T> {
-    if (!res.ok) {
-      let errorMsg = 'Error en la solicitud';
-      try {
-        const body = await res.json();
-        if (body && body.error) {
-          errorMsg = body.error;
-        }
-      } catch {
-        errorMsg = `Error ${res.status}: ${res.statusText}`;
-      }
-      throw new Error(errorMsg);
-    }
-    return res.json();
-  }
-
+export const api = {
   // Auth
   async login(email: string, password: string): Promise<{ user: User; token: string }> {
-    const res = await fetch('/api/auth/login', {
+    const data = await request<{ user: User; token: string }>('/api/auth/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
-    const data = await this.handleResponse<{ user: User; token: string }>(res);
-    this.setToken(data.token);
+    setStoredToken(data.token);
     return data;
-  }
-
-  async registerEmployee(data: { name: string; email: string; phone?: string }): Promise<{ user: User; tempPassword: string; token: string }> {
-    const res = await fetch('/api/auth/register-employee', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    const result = await this.handleResponse<{ user: User; tempPassword: string; token: string }>(res);
-    this.setToken(result.token);
-    return result;
-  }
+  },
 
   async getMe(): Promise<{ user: User }> {
-    const res = await fetch('/api/auth/me', {
-      headers: this.getHeaders(),
-    });
-    return this.handleResponse<{ user: User }>(res);
-  }
+    return request<{ user: User }>('/api/auth/me');
+  },
 
   async changePassword(newPassword: string): Promise<{ success: boolean; message: string }> {
-    const res = await fetch('/api/auth/change-password', {
+    return request<{ success: boolean; message: string }>('/api/auth/change-password', {
       method: 'POST',
-      headers: this.getHeaders(),
       body: JSON.stringify({ newPassword }),
     });
-    return this.handleResponse(res);
-  }
+  },
+
+  async registerEmployee(data: { name: string; email: string; phone?: string }): Promise<{ user: User; tempPassword: string; token: string }> {
+    const res = await request<{ user: User; tempPassword: string; token: string }>('/api/auth/register-employee', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    setStoredToken(res.token);
+    return res;
+  },
 
   async getQuickUsers(): Promise<User[]> {
-    const res = await fetch('/api/auth/quick-users');
-    return this.handleResponse<User[]>(res);
-  }
+    return request<User[]>('/api/auth/quick-users');
+  },
+
+  async getDbStatus(): Promise<any> {
+    return request<any>('/api/db/status');
+  },
 
   // Users
   async getUsers(): Promise<User[]> {
-    const res = await fetch('/api/users', {
-      headers: this.getHeaders(),
-    });
-    return this.handleResponse<User[]>(res);
-  }
+    return request<User[]>('/api/users');
+  },
 
-  async createUser(userData: {
-    name: string;
-    aliases?: string[];
-    email?: string;
-    phone?: string;
-    role?: 'admin' | 'employee';
-    status?: 'active' | 'deactivated';
-  }): Promise<User> {
-    const res = await fetch('/api/users', {
+  async createUser(data: Partial<User>): Promise<User> {
+    return request<User>('/api/users', {
       method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(userData),
+      body: JSON.stringify(data),
     });
-    return this.handleResponse<User>(res);
-  }
+  },
 
-  async updateUser(id: string, updates: Partial<User> & { resetPassword?: boolean }): Promise<User> {
-    const res = await fetch(`/api/users/${id}`, {
+  async updateUser(id: string, data: Partial<User> & { resetPassword?: boolean }): Promise<User> {
+    return request<User>(`/api/users/${id}`, {
       method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify(updates),
+      body: JSON.stringify(data),
     });
-    return this.handleResponse<User>(res);
-  }
+  },
 
-  async deleteUser(id: string, mode: 'deactivate' | 'permanent'): Promise<{ success: boolean; message: string }> {
-    const res = await fetch(`/api/users/${id}?mode=${mode}`, {
+  async deleteUser(id: string, mode: 'deactivate' | 'permanent'): Promise<{ success: boolean }> {
+    return request<{ success: boolean }>(`/api/users/${id}?mode=${mode}`, {
       method: 'DELETE',
-      headers: this.getHeaders(),
     });
-    return this.handleResponse(res);
-  }
+  },
 
   // Schedules
   async getSchedules(): Promise<WeekSchedule[]> {
-    const res = await fetch('/api/schedules', {
-      headers: this.getHeaders(),
-    });
-    return this.handleResponse<WeekSchedule[]>(res);
-  }
+    return request<WeekSchedule[]>('/api/schedules');
+  },
 
   async getSchedule(id: string): Promise<WeekSchedule> {
-    const res = await fetch(`/api/schedules/${id}`, {
-      headers: this.getHeaders(),
-    });
-    return this.handleResponse<WeekSchedule>(res);
-  }
+    return request<WeekSchedule>(`/api/schedules/${id}`);
+  },
 
   async saveDraft(data: Partial<WeekSchedule>): Promise<WeekSchedule> {
-    const res = await fetch('/api/schedules/draft', {
+    return request<WeekSchedule>('/api/schedules/draft', {
       method: 'POST',
-      headers: this.getHeaders(),
       body: JSON.stringify(data),
     });
-    return this.handleResponse<WeekSchedule>(res);
-  }
+  },
 
-  async publishSchedule(data: {
-    id?: string;
-    weekStartDate: string;
-    weekEndDate: string;
-    weekLabel: string;
-    rows: any[];
-    rawInputText?: string;
-    changeReason?: string;
-  }): Promise<WeekSchedule> {
-    const res = await fetch('/api/schedules/publish', {
+  async publishSchedule(data: Partial<WeekSchedule>): Promise<WeekSchedule> {
+    return request<WeekSchedule>('/api/schedules/publish', {
       method: 'POST',
-      headers: this.getHeaders(),
       body: JSON.stringify(data),
     });
-    return this.handleResponse<WeekSchedule>(res);
-  }
+  },
 
   // Requests
   async getRequests(): Promise<{
@@ -192,11 +142,12 @@ class ApiService {
     daysOffRequests: DaysOffRequest[];
     absenceRequests: AbsenceRequest[];
   }> {
-    const res = await fetch('/api/requests', {
-      headers: this.getHeaders(),
-    });
-    return this.handleResponse(res);
-  }
+    return request<{
+      shiftRequests: ShiftChangeRequest[];
+      daysOffRequests: DaysOffRequest[];
+      absenceRequests: AbsenceRequest[];
+    }>('/api/requests');
+  },
 
   async createShiftChangeRequest(data: {
     date: string;
@@ -205,35 +156,29 @@ class ApiService {
     coworkerId?: string;
     comments?: string;
   }): Promise<ShiftChangeRequest> {
-    const res = await fetch('/api/requests/shift-change', {
+    return request<ShiftChangeRequest>('/api/requests/shift-change', {
       method: 'POST',
-      headers: this.getHeaders(),
       body: JSON.stringify(data),
     });
-    return this.handleResponse<ShiftChangeRequest>(res);
-  }
+  },
 
   async respondCoworkerShiftChange(id: string, response: 'accepted' | 'rejected', comment?: string): Promise<ShiftChangeRequest> {
-    const res = await fetch(`/api/requests/shift-change/${id}/coworker-response`, {
+    return request<ShiftChangeRequest>(`/api/requests/shift-change/${id}/coworker-response`, {
       method: 'POST',
-      headers: this.getHeaders(),
       body: JSON.stringify({ response, comment }),
     });
-    return this.handleResponse<ShiftChangeRequest>(res);
-  }
+  },
 
   async createDaysOffRequest(data: {
     startDate: string;
     endDate: string;
     comment?: string;
   }): Promise<DaysOffRequest> {
-    const res = await fetch('/api/requests/days-off', {
+    return request<DaysOffRequest>('/api/requests/days-off', {
       method: 'POST',
-      headers: this.getHeaders(),
       body: JSON.stringify(data),
     });
-    return this.handleResponse<DaysOffRequest>(res);
-  }
+  },
 
   async createAbsenceRequest(data: {
     subType: 'communication' | 'leave_request';
@@ -243,181 +188,126 @@ class ApiService {
     hasCertificate: boolean;
     comment?: string;
   }): Promise<AbsenceRequest> {
-    const res = await fetch('/api/requests/absence', {
+    return request<AbsenceRequest>('/api/requests/absence', {
       method: 'POST',
-      headers: this.getHeaders(),
       body: JSON.stringify(data),
     });
-    return this.handleResponse<AbsenceRequest>(res);
-  }
+  },
 
   async updateRequestStatus(
     type: 'shift-change' | 'days-off' | 'absence',
     id: string,
-    status: string,
-    comment?: string,
-    applyToSchedule?: boolean
+    data: { status: string; comment?: string; applyToSchedule?: boolean }
   ): Promise<any> {
-    const res = await fetch(`/api/requests/${type}/${id}/status`, {
+    return request<any>(`/api/requests/${type}/${id}/status`, {
       method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ status, comment, applyToSchedule }),
+      body: JSON.stringify(data),
     });
-    return this.handleResponse(res);
-  }
+  },
 
-  async addRequestComment(type: 'shift-change' | 'days-off' | 'absence', id: string, text: string): Promise<any> {
-    const res = await fetch(`/api/requests/${type}/${id}/comments`, {
+  async addRequestComment(
+    type: 'shift-change' | 'days-off' | 'absence',
+    id: string,
+    text: string
+  ): Promise<any> {
+    return request<any>(`/api/requests/${type}/${id}/comments`, {
       method: 'POST',
-      headers: this.getHeaders(),
       body: JSON.stringify({ text }),
     });
-    return this.handleResponse(res);
-  }
+  },
+
+  async seedTestRequests(): Promise<{ success: boolean; count: number }> {
+    return request<{ success: boolean; count: number }>('/api/requests/seed-test', {
+      method: 'POST',
+    });
+  },
 
   // Incidents
   async getIncidents(): Promise<IncidentItem[]> {
-    const res = await fetch('/api/incidents', {
-      headers: this.getHeaders(),
-    });
-    return this.handleResponse<IncidentItem[]>(res);
-  }
+    return request<IncidentItem[]>('/api/incidents');
+  },
 
-  async createIncident(data: {
-    category: string;
-    date: string;
-    description: string;
-  }): Promise<IncidentItem> {
-    const res = await fetch('/api/incidents', {
+  async createIncident(data: { category: string; date: string; description: string }): Promise<IncidentItem> {
+    return request<IncidentItem>('/api/incidents', {
       method: 'POST',
-      headers: this.getHeaders(),
       body: JSON.stringify(data),
     });
-    return this.handleResponse<IncidentItem>(res);
-  }
+  },
 
-  async updateIncidentStatus(id: string, status: string, comment?: string): Promise<IncidentItem> {
-    const res = await fetch(`/api/incidents/${id}/status`, {
+  async updateIncidentStatus(id: string, data: { status: string; comment?: string }): Promise<IncidentItem> {
+    return request<IncidentItem>(`/api/incidents/${id}/status`, {
       method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ status, comment }),
+      body: JSON.stringify(data),
     });
-    return this.handleResponse<IncidentItem>(res);
-  }
+  },
 
   // Notifications
   async getNotifications(): Promise<NotificationItem[]> {
-    const res = await fetch('/api/notifications', {
-      headers: this.getHeaders(),
-    });
-    return this.handleResponse<NotificationItem[]>(res);
-  }
+    return request<NotificationItem[]>('/api/notifications');
+  },
 
   async markNotificationRead(id: string): Promise<{ success: boolean }> {
-    const res = await fetch(`/api/notifications/${id}/read`, {
+    return request<{ success: boolean }>(`/api/notifications/${id}/read`, {
       method: 'PUT',
-      headers: this.getHeaders(),
     });
-    return this.handleResponse(res);
-  }
+  },
 
   async markAllNotificationsRead(): Promise<{ success: boolean }> {
-    const res = await fetch('/api/notifications/mark-all-read', {
+    return request<{ success: boolean }>('/api/notifications/mark-all-read', {
       method: 'POST',
-      headers: this.getHeaders(),
     });
-    return this.handleResponse(res);
-  }
+  },
 
-  // Audit & Emails
+  // Audit Logs & Emails
   async getAuditLogs(): Promise<AuditLogItem[]> {
-    const res = await fetch('/api/audit', {
-      headers: this.getHeaders(),
-    });
-    return this.handleResponse<AuditLogItem[]>(res);
-  }
+    return request<AuditLogItem[]>('/api/audit');
+  },
 
   async getSentEmails(): Promise<Array<{ id: string; to: string; subject: string; body: string; date: string }>> {
-    const res = await fetch('/api/emails', {
-      headers: this.getHeaders(),
-    });
-    return this.handleResponse(res);
-  }
-
-  // Backups
-  async getBackups(): Promise<Array<{ filename: string; size: number; createdAt: string }>> {
-    const res = await fetch('/api/backups', {
-      headers: this.getHeaders(),
-    });
-    return this.handleResponse(res);
-  }
-
-  async createBackup(notes?: string): Promise<{ success: boolean; filename: string }> {
-    const res = await fetch('/api/backups/create', {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ notes }),
-    });
-    return this.handleResponse(res);
-  }
-
-  async restoreBackup(filename?: string, backupData?: any): Promise<{ success: boolean; message: string }> {
-    const res = await fetch('/api/backups/restore', {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ filename, backupData }),
-    });
-    return this.handleResponse(res);
-  }
+    return request<Array<{ id: string; to: string; subject: string; body: string; date: string }>>('/api/emails');
+  },
 
   // Settings
   async getSettings(): Promise<AppSettings> {
-    const res = await fetch('/api/settings', {
-      headers: this.getHeaders(),
-    });
-    return this.handleResponse<AppSettings>(res);
-  }
+    return request<AppSettings>('/api/settings');
+  },
 
   async updateSettings(settings: Partial<AppSettings>): Promise<AppSettings> {
-    const res = await fetch('/api/settings', {
+    return request<AppSettings>('/api/settings', {
       method: 'PUT',
-      headers: this.getHeaders(),
       body: JSON.stringify(settings),
     });
-    return this.handleResponse<AppSettings>(res);
-  }
+  },
 
-  // Demo Data
-  async seedDemoData(): Promise<{ success: boolean; message: string }> {
-    const res = await fetch('/api/demo/seed', {
+  // Backups
+  async getBackups(): Promise<Array<{ filename: string; size: number; createdAt: string }>> {
+    return request<Array<{ filename: string; size: number; createdAt: string }>>('/api/backups');
+  },
+
+  async createBackup(notes?: string): Promise<{ success: boolean; filename: string }> {
+    return request<{ success: boolean; filename: string }>('/api/backups/create', {
       method: 'POST',
-      headers: this.getHeaders(),
+      body: JSON.stringify({ notes }),
     });
-    return this.handleResponse(res);
-  }
+  },
+
+  async restoreBackup(filename?: string, backupData?: any): Promise<{ success: boolean; message: string }> {
+    return request<{ success: boolean; message: string }>('/api/backups/restore', {
+      method: 'POST',
+      body: JSON.stringify({ filename, backupData }),
+    });
+  },
+
+  // Demo
+  async seedDemoData(): Promise<{ success: boolean; message: string }> {
+    return request<{ success: boolean; message: string }>('/api/demo/seed', {
+      method: 'POST',
+    });
+  },
 
   async clearDemoData(): Promise<{ success: boolean; message: string }> {
-    const res = await fetch('/api/demo/clear', {
+    return request<{ success: boolean; message: string }>('/api/demo/clear', {
       method: 'POST',
-      headers: this.getHeaders(),
     });
-    return this.handleResponse(res);
-  }
-
-  async getDbStatus(): Promise<{
-    status: string;
-    timestamp: string;
-    usersCount: number;
-    schedulesCount: number;
-    requestsCount: number;
-    incidentsCount: number;
-    auditLogsCount: number;
-    firestoreProjectId: string;
-    firestoreDatabaseId: string;
-  }> {
-    const res = await fetch('/api/db/status');
-    return this.handleResponse(res);
-  }
-}
-
-export const api = new ApiService();
+  },
+};

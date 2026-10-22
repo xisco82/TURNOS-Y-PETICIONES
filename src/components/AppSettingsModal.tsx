@@ -396,6 +396,3 @@ export const AppSettingsModal: React.FC<Props> = ({ onClose, onRefresh }) => {
     </div>
   );
 };
-
-
-

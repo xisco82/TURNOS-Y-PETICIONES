@@ -163,6 +163,3 @@ export const EmployeeProfileView: React.FC = () => {
     </div>
   );
 };
-
-
-

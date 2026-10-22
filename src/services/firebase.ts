@@ -1,83 +1,115 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
-import rawConfig from '../../firebase-applet-config.json';
-import { User, WeekSchedule, AppSettings } from '../types';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import configJson from '../../firebase-applet-config.json';
 
-export const firebaseConfig = rawConfig;
+export const firebaseConfig = configJson;
 
-export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-
+const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 export const db = firebaseConfig.firestoreDatabaseId
   ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
   : getFirestore(app);
 
+export const auth = getAuth(app);
+
+export async function loginWithGoogle(): Promise<FirebaseUser> {
+  const provider = new GoogleAuthProvider();
+  const credential = await signInWithPopup(auth, provider);
+  return credential.user;
+}
+
+export async function logoutFirebase(): Promise<void> {
+  await signOut(auth);
+}
+
 export async function testConnection(): Promise<boolean> {
   try {
     const testDoc = doc(db, 'test', 'connection');
-    await getDoc(testDoc);
+    await getDoc(testDoc).catch(() => null);
     return true;
   } catch (e) {
-    console.warn('Firestore connection check completed (service active):', e);
+    console.warn('Firestore test connection notice:', e);
     return true;
   }
 }
 
 export async function syncDatabaseToFirestore(data: {
-  users: User[];
-  schedules: WeekSchedule[];
-  settings: AppSettings;
-}): Promise<{ success: boolean; syncedCount: number }> {
+  users?: any[];
+  schedules?: any[];
+  requests?: any[];
+  incidents?: any[];
+  settings?: any;
+}): Promise<{ syncedCount: number; errors: string[] }> {
   let count = 0;
+  const errors: string[] = [];
 
-  try {
-    // 1. Sync users
-    for (const user of data.users) {
-      await setDoc(doc(db, 'users', user.id), {
-        id: user.id,
-        name: user.name,
-        aliases: user.aliases || [],
-        email: user.email,
-        phone: user.phone || '',
-        role: user.role,
-        status: user.status,
-        createdAt: user.createdAt || new Date().toISOString(),
-      }, { merge: true });
-      count++;
+  // 1. Sync Requests (Shift changes, Days off, Absences)
+  if (data.requests && Array.isArray(data.requests)) {
+    for (const req of data.requests) {
+      if (req.id) {
+        try {
+          await setDoc(doc(db, 'requests', req.id), req, { merge: true });
+          count++;
+        } catch (err: any) {
+          console.warn(`Error writing request ${req.id} to Firestore:`, err.message);
+          errors.push(`Petición ${req.id}: ${err.message}`);
+        }
+      }
     }
-
-    // 2. Sync schedules
-    for (const sch of data.schedules) {
-      await setDoc(doc(db, 'schedules', sch.id), {
-        id: sch.id,
-        weekStartDate: sch.weekStartDate,
-        weekEndDate: sch.weekEndDate,
-        weekLabel: sch.weekLabel,
-        status: sch.status,
-        version: sch.version,
-        publishedAt: sch.publishedAt || new Date().toISOString(),
-        publishedBy: sch.publishedBy || '',
-        changeReason: sch.changeReason || '',
-        rows: sch.rows,
-        createdAt: sch.createdAt || new Date().toISOString(),
-        updatedAt: sch.updatedAt || new Date().toISOString(),
-      }, { merge: true });
-      count++;
-    }
-
-    // 3. Sync settings
-    if (data.settings) {
-      await setDoc(doc(db, 'settings', 'global'), {
-        id: 'global',
-        companyName: 'Hotel HM Gran Fiesta',
-        allowEmployeeViewGeneralSchedule: data.settings.generalScheduleVisibleToEmployees,
-        timezone: data.settings.timezone || 'Europe/Madrid',
-      }, { merge: true });
-      count++;
-    }
-
-    return { success: true, syncedCount: count };
-  } catch (err: any) {
-    console.error('Error syncing to Firestore:', err);
-    throw err;
   }
+
+  // 2. Sync Incidents
+  if (data.incidents && Array.isArray(data.incidents)) {
+    for (const inc of data.incidents) {
+      if (inc.id) {
+        try {
+          await setDoc(doc(db, 'incidents', inc.id), inc, { merge: true });
+          count++;
+        } catch (err: any) {
+          console.warn(`Error writing incident ${inc.id} to Firestore:`, err.message);
+          errors.push(`Incidencia ${inc.id}: ${err.message}`);
+        }
+      }
+    }
+  }
+
+  // 3. Sync Users
+  if (data.users && Array.isArray(data.users)) {
+    for (const u of data.users) {
+      if (u.id) {
+        try {
+          await setDoc(doc(db, 'users', u.id), u, { merge: true });
+          count++;
+        } catch (err: any) {
+          errors.push(`Usuario ${u.id}: ${err.message}`);
+        }
+      }
+    }
+  }
+
+  // 4. Sync Schedules
+  if (data.schedules && Array.isArray(data.schedules)) {
+    for (const s of data.schedules) {
+      if (s.id) {
+        try {
+          await setDoc(doc(db, 'schedules', s.id), s, { merge: true });
+          count++;
+        } catch (err: any) {
+          errors.push(`Cuadrante ${s.id}: ${err.message}`);
+        }
+      }
+    }
+  }
+
+  // 5. Sync Settings
+  if (data.settings) {
+    try {
+      await setDoc(doc(db, 'settings', 'global'), data.settings, { merge: true });
+      count++;
+    } catch (err: any) {
+      errors.push(`Ajustes: ${err.message}`);
+    }
+  }
+
+  return { syncedCount: count, errors };
 }

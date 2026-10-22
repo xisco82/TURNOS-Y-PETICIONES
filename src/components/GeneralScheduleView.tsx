@@ -228,6 +228,3 @@ export const GeneralScheduleView: React.FC = () => {
     </div>
   );
 };
-
-
-

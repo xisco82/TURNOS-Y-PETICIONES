@@ -18,6 +18,7 @@ import { NotificationItem } from '../types';
 import { api } from '../services/api';
 import { APP_BRAND } from '../constants/branding';
 import { InteractiveLogo } from './InteractiveLogo';
+import { DatabaseSyncIndicator } from './DatabaseSyncIndicator';
 
 interface HeaderProps {
   activeTab: string;
@@ -106,6 +107,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Quick-switch user bar & actions */}
           <div className="flex items-center gap-2 sm:gap-3">
+            <DatabaseSyncIndicator variant="badge" />
             <PWAInstallButton />
 
             {/* Test Suite Button */}
@@ -459,6 +461,3 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
-
-
-

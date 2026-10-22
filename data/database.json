@@ -5,9 +5,10 @@
       "name": "Administrador Principal",
       "aliases": [
         "Admin",
-        "Dirección"
+        "Dirección",
+        "xiscooquin"
       ],
-      "email": "xiscoquin@gmail.com",
+      "email": "xiscooquin@gmail.com",
       "phone": "+34 600 000 000",
       "role": "admin",
       "status": "active",
@@ -197,10 +198,153 @@
     }
   ],
   "schedules": [],
-  "shiftRequests": [],
-  "daysOffRequests": [],
-  "absenceRequests": [],
-  "incidents": [],
+  "shiftRequests": [
+    {
+      "id": "req-sc-test-1",
+      "employeeId": "emp-1",
+      "employeeName": "Francisco Gallego Huguet",
+      "type": "shift_change",
+      "date": "2026-11-04",
+      "currentShift": "09:00-17:00",
+      "proposedShift": "14:00-22:00",
+      "coworkerId": "emp-2",
+      "coworkerName": "Aliz Varga",
+      "coworkerStatus": "pending",
+      "status": "pending",
+      "comments": [
+        {
+          "id": "c-test-1",
+          "userId": "emp-1",
+          "userName": "Francisco Gallego Huguet",
+          "text": "[Petición de Test] Solicitud de cambio de turno para el miércoles por cita personal.",
+          "createdAt": "2026-10-22T10:00:00.000Z"
+        }
+      ],
+      "createdAt": "2026-10-22T10:00:00.000Z",
+      "updatedAt": "2026-10-22T10:00:00.000Z"
+    },
+    {
+      "id": "req-sc-test-2",
+      "employeeId": "emp-3",
+      "employeeName": "Oscar David Millán Vivancos",
+      "type": "shift_change",
+      "date": "2026-11-06",
+      "currentShift": "14:00-22:00",
+      "proposedShift": "09:00-17:00",
+      "coworkerId": "emp-4",
+      "coworkerName": "Francisco Javier Segundo Moya",
+      "coworkerStatus": "accepted",
+      "status": "pending",
+      "comments": [
+        {
+          "id": "c-test-2",
+          "userId": "emp-3",
+          "userName": "Oscar David Millán Vivancos",
+          "text": "[Petición de Test] Intercambio hablado previamente con Javi para cubrir turno de mañana.",
+          "createdAt": "2026-10-22T10:15:00.000Z"
+        },
+        {
+          "id": "c-test-3",
+          "userId": "emp-4",
+          "userName": "Francisco Javier Segundo Moya",
+          "text": "[Respuesta compañero: Aceptado] De acuerdo, me viene bien hacer la tarde el viernes.",
+          "createdAt": "2026-10-22T10:30:00.000Z"
+        }
+      ],
+      "createdAt": "2026-10-22T10:15:00.000Z",
+      "updatedAt": "2026-10-22T10:30:00.000Z"
+    }
+  ],
+  "daysOffRequests": [
+    {
+      "id": "req-do-test-1",
+      "employeeId": "emp-5",
+      "employeeName": "Inés Ruiz Morey",
+      "type": "days_off",
+      "startDate": "2026-11-10",
+      "endDate": "2026-11-12",
+      "comment": "[Petición de Test] Petición de 3 días libres por asuntos propios.",
+      "status": "pending",
+      "comments": [
+        {
+          "id": "c-test-4",
+          "userId": "emp-5",
+          "userName": "Inés Ruiz Morey",
+          "text": "Solicito 3 días de descanso acumulado.",
+          "createdAt": "2026-10-22T09:45:00.000Z"
+        }
+      ],
+      "createdAt": "2026-10-22T09:45:00.000Z",
+      "updatedAt": "2026-10-22T09:45:00.000Z"
+    },
+    {
+      "id": "req-do-test-2",
+      "employeeId": "emp-6",
+      "employeeName": "Josep Vidal Pérez",
+      "type": "days_off",
+      "startDate": "2026-11-20",
+      "endDate": "2026-11-23",
+      "comment": "[Petición de Test] Fin de semana largo por compensación de festivos.",
+      "status": "approved",
+      "comments": [
+        {
+          "id": "c-test-5",
+          "userId": "emp-6",
+          "userName": "Josep Vidal Pérez",
+          "text": "Compensación de festivos trabajados en temporada.",
+          "createdAt": "2026-10-22T09:00:00.000Z"
+        },
+        {
+          "id": "c-test-6",
+          "userId": "admin-1",
+          "userName": "Administrador Principal",
+          "text": "Aprobado. Queda registrado en la planificación de noviembre.",
+          "createdAt": "2026-10-22T10:20:00.000Z"
+        }
+      ],
+      "createdAt": "2026-10-22T09:00:00.000Z",
+      "updatedAt": "2026-10-22T10:20:00.000Z"
+    }
+  ],
+  "absenceRequests": [
+    {
+      "id": "req-ab-test-1",
+      "employeeId": "emp-7",
+      "employeeName": "Miriam García Heras",
+      "type": "absence",
+      "subType": "communication",
+      "category": "medico",
+      "startDate": "2026-11-05",
+      "endDate": "2026-11-05",
+      "hasCertificate": true,
+      "status": "acknowledged",
+      "comments": [
+        {
+          "id": "c-test-7",
+          "userId": "emp-7",
+          "userName": "Miriam García Heras",
+          "text": "[Petición de Test] Comunicación de cita con médico especialista por la mañana. Aportaré justificante.",
+          "createdAt": "2026-10-22T09:30:00.000Z"
+        }
+      ],
+      "createdAt": "2026-10-22T09:30:00.000Z",
+      "updatedAt": "2026-10-22T09:30:00.000Z"
+    }
+  ],
+  "incidents": [
+    {
+      "id": "inc-test-1",
+      "employeeId": "emp-8",
+      "employeeName": "Carlos Rodríguez Martín",
+      "category": "Relevo de Turno",
+      "date": "2026-11-02",
+      "description": "[Petición de Test / Incidencia] Retraso de 15 minutos en el relevo de recepción debido a avería en el transporte público.",
+      "status": "abierta",
+      "comments": [],
+      "createdAt": "2026-10-22T08:30:00.000Z",
+      "updatedAt": "2026-10-22T08:30:00.000Z"
+    }
+  ],
   "notifications": [
     {
       "id": "notif-1792666618188-z9fbu",

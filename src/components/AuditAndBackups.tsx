@@ -512,14 +512,27 @@ export const AuditAndBackups: React.FC = () => {
                 onClick={async () => {
                   setSyncingFirestore(true);
                   try {
-                    const [users, schedules, settings] = await Promise.all([
+                    const [users, schedules, settings, reqs, incs] = await Promise.all([
                       api.getUsers(),
                       api.getSchedules(),
                       api.getSettings(),
+                      api.getRequests(),
+                      api.getIncidents(),
                     ]);
-                    const res = await syncDatabaseToFirestore({ users, schedules, settings });
+                    const allReqs = [
+                      ...(reqs.shiftRequests || []),
+                      ...(reqs.daysOffRequests || []),
+                      ...(reqs.absenceRequests || []),
+                    ];
+                    const res = await syncDatabaseToFirestore({
+                      users,
+                      schedules,
+                      settings,
+                      requests: allReqs,
+                      incidents: incs,
+                    });
                     setStatusMsg({
-                      text: `¡Sincronización completada con éxito! ${res.syncedCount} documentos guardados en Firestore (${firebaseConfig.projectId}).`,
+                      text: `¡Sincronización completada con éxito! ${res.syncedCount} documentos guardados en Firestore (${firebaseConfig.projectId}), incluyendo peticiones de test.`,
                       type: 'success',
                     });
                   } catch (e: any) {
@@ -541,6 +554,3 @@ export const AuditAndBackups: React.FC = () => {
     </div>
   );
 };
-
-
-
