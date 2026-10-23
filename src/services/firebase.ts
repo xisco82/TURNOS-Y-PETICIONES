@@ -290,3 +290,12 @@ export async function getEmployeesFromFirestore(): Promise<any[]> {
     return [];
   }
 }
+
+export async function saveEmployeeToFirestore(user: any): Promise<void> {
+  if (!user || !user.id) return;
+  await setDoc(doc(db, 'users', user.id), {
+    ...user,
+    updatedAt: new Date().toISOString(),
+  }, { merge: true });
+}
+

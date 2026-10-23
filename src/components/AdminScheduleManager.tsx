@@ -61,19 +61,39 @@ export const AdminScheduleManager: React.FC<Props> = ({ employees, onSchedulePub
 
   // Automatically parse official schedule when employees list is loaded
   useEffect(() => {
-    if (employees && employees.length > 0 && !parseResult) {
+    if (employees && employees.length > 1 && !parseResult) {
       const res = parseScheduleInput(inputText || OFFICIAL_SCHEDULE_TEXT, employees, targetWeekDate);
       setParseResult(res);
+    } else if (!employees || employees.length <= 1) {
+      // Auto-fetch employees from database (Firestore / API) if not provided yet
+      api.getUsers().then(list => {
+        if (list && list.length > 1) {
+          onRefreshEmployees?.();
+          const res = parseScheduleInput(inputText || OFFICIAL_SCHEDULE_TEXT, list, targetWeekDate);
+          setParseResult(res);
+        }
+      });
     }
   }, [employees, inputText, targetWeekDate, parseResult]);
 
-  const handlePreview = () => {
+  const handlePreview = async () => {
     if (!inputText.trim()) {
       setFeedbackMsg({ text: 'Por favor, pega el texto o tabla del cuadrante', type: 'error' });
       return;
     }
 
-    const res = parseScheduleInput(inputText, employees, targetWeekDate);
+    let activeEmployees = employees;
+    if (!activeEmployees || activeEmployees.length <= 1) {
+      try {
+        const fresh = await api.getUsers();
+        if (fresh && fresh.length > 1) {
+          activeEmployees = fresh;
+          onRefreshEmployees?.();
+        }
+      } catch {}
+    }
+
+    const res = parseScheduleInput(inputText, activeEmployees, targetWeekDate);
     setParseResult(res);
     setFeedbackMsg(null);
 
@@ -211,11 +231,22 @@ export const AdminScheduleManager: React.FC<Props> = ({ employees, onSchedulePub
   };
 
   // Example templates for 1-click loading as per Section 5 & Section 13
-  const loadExample = (type: string) => {
+  const loadExample = async (type: string) => {
+    let activeEmployees = employees;
+    if (!activeEmployees || activeEmployees.length <= 1) {
+      try {
+        const fresh = await api.getUsers();
+        if (fresh && fresh.length > 1) {
+          activeEmployees = fresh;
+          onRefreshEmployees?.();
+        }
+      } catch {}
+    }
+
     if (type === 'sheets' || type === 'official') {
       setInputText(OFFICIAL_SCHEDULE_TEXT);
       setTargetWeekDate('2026-11-02');
-      const res = parseScheduleInput(OFFICIAL_SCHEDULE_TEXT, employees, '2026-11-02');
+      const res = parseScheduleInput(OFFICIAL_SCHEDULE_TEXT, activeEmployees, '2026-11-02');
       setParseResult(res);
     } else if (type === 'sheets-oct') {
       setInputText(

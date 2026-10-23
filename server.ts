@@ -41,13 +41,22 @@ if (!fs.existsSync(BACKUPS_DIR)) {
 }
 
 // In Vercel serverless, seed initial DB from project files if not exists in /tmp
-if (process.env.VERCEL && !fs.existsSync(DB_FILE)) {
-  const localDb = path.resolve(__dirname, 'data', 'database.json');
-  if (fs.existsSync(localDb)) {
-    try {
-      fs.copyFileSync(localDb, DB_FILE);
-    } catch {
-      // Handled in loadDatabase
+if (process.env.VERCEL) {
+  const candidatePaths = [
+    path.resolve(process.cwd(), 'data', 'database.json'),
+    path.resolve(__dirname, 'data', 'database.json'),
+    path.resolve(__dirname, '..', 'data', 'database.json'),
+  ];
+  for (const cp of candidatePaths) {
+    if (fs.existsSync(cp)) {
+      try {
+        if (!fs.existsSync(DB_FILE)) {
+          fs.copyFileSync(cp, DB_FILE);
+        }
+        break;
+      } catch {
+        // Handled in loadDatabase
+      }
     }
   }
 }
@@ -313,8 +322,23 @@ let db: DatabaseSchema = getInitialDatabase();
 // Load or Initialize database from disk
 function loadDatabase() {
   try {
-    if (fs.existsSync(DB_FILE)) {
-      const raw = fs.readFileSync(DB_FILE, 'utf-8');
+    let targetFile = DB_FILE;
+    if (!fs.existsSync(targetFile)) {
+      const candidates = [
+        path.resolve(process.cwd(), 'data', 'database.json'),
+        path.resolve(__dirname, 'data', 'database.json'),
+        path.resolve(__dirname, '..', 'data', 'database.json'),
+      ];
+      for (const cand of candidates) {
+        if (fs.existsSync(cand)) {
+          targetFile = cand;
+          break;
+        }
+      }
+    }
+
+    if (fs.existsSync(targetFile)) {
+      const raw = fs.readFileSync(targetFile, 'utf-8');
       db = JSON.parse(raw);
       // Ensure all collections exist
       if (!db.users || !Array.isArray(db.users)) db.users = [ADMIN_USER];

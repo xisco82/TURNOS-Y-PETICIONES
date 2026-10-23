@@ -11,7 +11,7 @@ import {
 } from '../types';
 import { OFFICIAL_ADMIN_USER, normalizeDni } from '../constants/initialEmployees';
 import { OFFICIAL_WEEK_SCHEDULE } from '../constants/officialSchedule';
-import { getEmployeesFromFirestore } from './firebase';
+import { getEmployeesFromFirestore, saveEmployeeToFirestore } from './firebase';
 
 const TOKEN_KEY = 'hgranfiesta_auth_token';
 
@@ -459,18 +459,50 @@ export const api = {
   async getUsers(): Promise<User[]> {
     try {
       const list = await request<User[]>('/api/users');
-      try { localStorage.setItem('app_database_users', JSON.stringify(list)); } catch {}
-      return list;
-    } catch {
-      return await loadStoredOrFirestoreUsers();
-    }
+      if (Array.isArray(list) && list.length > 1) {
+        try { localStorage.setItem('app_database_users', JSON.stringify(list)); } catch {}
+        return list;
+      }
+    } catch {}
+
+    return await loadStoredOrFirestoreUsers();
   },
 
   async createUser(data: Partial<User>): Promise<User> {
-    return request<User>('/api/users', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    try {
+      const created = await request<User>('/api/users', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      try {
+        await saveEmployeeToFirestore(created);
+      } catch {}
+      return created;
+    } catch {
+      const newId = data.id || `emp-${Date.now()}`;
+      const newUser: User = {
+        id: newId,
+        name: data.name || '',
+        aliases: data.aliases || [data.name || ''],
+        email: data.email || `${newId}@empresa.com`,
+        dni: data.dni || '',
+        phone: data.phone || '',
+        role: data.role || 'employee',
+        status: data.status || 'active',
+        tempPassword: data.tempPassword || 'emp1234',
+        mustChangePassword: false,
+        createdAt: new Date().toISOString(),
+      };
+      try {
+        await saveEmployeeToFirestore(newUser);
+      } catch {}
+      try {
+        const cached = await loadStoredOrFirestoreUsers();
+        const updated = [...cached.filter(u => u.id !== newId), newUser];
+        localStorage.setItem('app_database_users', JSON.stringify(updated));
+      } catch {}
+      return newUser;
+    }
   },
 
   async updateUser(id: string, data: Partial<User> & { resetPassword?: boolean }): Promise<User> {
