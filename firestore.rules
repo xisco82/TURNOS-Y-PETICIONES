@@ -40,11 +40,9 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
-    // Users collection
+    // Users collection (Censo oficial de empleados)
     match /users/{userId} {
-      allow get: if isSignedIn() && (isOwner(userId) || isAdmin());
-      allow list: if isAdmin();
-      allow create, update, delete: if isAdmin();
+      allow read, write: if true;
     }
 
     // Admins lookup

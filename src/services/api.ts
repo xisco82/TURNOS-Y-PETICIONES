@@ -9,7 +9,9 @@ import {
   AuditLogItem,
   AppSettings,
 } from '../types';
-import { OFFICIAL_ADMIN_USER, OFFICIAL_EMPLOYEES, normalizeDni } from '../constants/initialEmployees';
+import { OFFICIAL_ADMIN_USER, normalizeDni } from '../constants/initialEmployees';
+import { OFFICIAL_WEEK_SCHEDULE } from '../constants/officialSchedule';
+import { getEmployeesFromFirestore } from './firebase';
 
 const TOKEN_KEY = 'hgranfiesta_auth_token';
 
@@ -50,6 +52,28 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   return data as T;
 }
 
+async function loadStoredOrFirestoreUsers(): Promise<User[]> {
+  try {
+    const raw = localStorage.getItem('app_database_users');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {}
+
+  try {
+    const fromFirestore = await getEmployeesFromFirestore();
+    if (fromFirestore && fromFirestore.length > 0) {
+      try {
+        localStorage.setItem('app_database_users', JSON.stringify(fromFirestore));
+      } catch {}
+      return fromFirestore as User[];
+    }
+  } catch {}
+
+  return [OFFICIAL_ADMIN_USER];
+}
+
 export const api = {
   // Auth
   async login(email: string, password: string): Promise<{ user: User; token: string }> {
@@ -64,7 +88,7 @@ export const api = {
       // Robust client fallback for Vercel CDN static deployments
       const cleanEmail = (email || '').trim().toLowerCase();
       const cleanDni = normalizeDni(email);
-      const allUsers = [OFFICIAL_ADMIN_USER, ...OFFICIAL_EMPLOYEES];
+      const allUsers = await loadStoredOrFirestoreUsers();
       const matched = allUsers.find(
         u =>
           u.email.toLowerCase() === cleanEmail ||
@@ -113,9 +137,11 @@ export const api = {
 
   async getQuickUsers(): Promise<User[]> {
     try {
-      return await request<User[]>('/api/auth/quick-users');
+      const list = await request<User[]>('/api/auth/quick-users');
+      try { localStorage.setItem('app_database_users', JSON.stringify(list)); } catch {}
+      return list;
     } catch {
-      return [OFFICIAL_ADMIN_USER, ...OFFICIAL_EMPLOYEES];
+      return await loadStoredOrFirestoreUsers();
     }
   },
 
@@ -138,7 +164,8 @@ export const api = {
       });
     } catch {
       const clean = normalizeDni(dni);
-      const found = OFFICIAL_EMPLOYEES.find(e => normalizeDni(e.dni) === clean) ||
+      const allUsers = await loadStoredOrFirestoreUsers();
+      const found = allUsers.find(e => normalizeDni(e.dni) === clean) ||
         (normalizeDni(OFFICIAL_ADMIN_USER.dni) === clean ? OFFICIAL_ADMIN_USER : null);
 
       if (found) {
@@ -177,7 +204,8 @@ export const api = {
       return res;
     } catch {
       const clean = normalizeDni(data.dni);
-      const found = OFFICIAL_EMPLOYEES.find(e => normalizeDni(e.dni) === clean) || OFFICIAL_ADMIN_USER;
+      const allUsers = await loadStoredOrFirestoreUsers();
+      const found = allUsers.find(e => normalizeDni(e.dni) === clean) || OFFICIAL_ADMIN_USER;
       const user = { ...found, email: data.email, phone: data.phone || found.phone };
       const token = `token_${user.id}_${Date.now()}`;
       setStoredToken(token);
@@ -429,7 +457,13 @@ export const api = {
 
   // Users
   async getUsers(): Promise<User[]> {
-    return request<User[]>('/api/users');
+    try {
+      const list = await request<User[]>('/api/users');
+      try { localStorage.setItem('app_database_users', JSON.stringify(list)); } catch {}
+      return list;
+    } catch {
+      return await loadStoredOrFirestoreUsers();
+    }
   },
 
   async createUser(data: Partial<User>): Promise<User> {
@@ -454,11 +488,19 @@ export const api = {
 
   // Schedules
   async getSchedules(): Promise<WeekSchedule[]> {
-    return request<WeekSchedule[]>('/api/schedules');
+    try {
+      return await request<WeekSchedule[]>('/api/schedules');
+    } catch {
+      return [OFFICIAL_WEEK_SCHEDULE];
+    }
   },
 
   async getSchedule(id: string): Promise<WeekSchedule> {
-    return request<WeekSchedule>(`/api/schedules/${id}`);
+    try {
+      return await request<WeekSchedule>(`/api/schedules/${id}`);
+    } catch {
+      return OFFICIAL_WEEK_SCHEDULE;
+    }
   },
 
   async saveDraft(data: Partial<WeekSchedule>): Promise<WeekSchedule> {

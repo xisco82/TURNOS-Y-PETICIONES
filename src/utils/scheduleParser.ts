@@ -80,7 +80,10 @@ export function parseShiftText(rawText: string, dateStr: string): ShiftDetail | 
     return { type: 'vacation', rawText: trimmed, hours: 0 };
   }
   if (upper === 'BP' || upper === 'BAJA' || upper === 'MEDICO' || upper === 'MÉDICO' || upper === 'IT') {
-    return { type: 'sick', rawText: trimmed, hours: 0 };
+    return { type: 'sick', rawText: trimmed, hours: 0, note: 'Baja Médica / IT' };
+  }
+  if (upper === 'AP' || upper === 'ASUNTOS PROPIOS' || upper === 'PERMISO' || upper === 'LICENCIA') {
+    return { type: 'free', rawText: trimmed, hours: 0, note: 'Asuntos Propios (Permiso)' };
   }
   if (upper === 'FESTIVO' || upper === 'FEST') {
     return { type: 'holiday', rawText: trimmed, hours: 0 };
@@ -144,33 +147,56 @@ export function parseShiftText(rawText: string, dateStr: string): ShiftDetail | 
   };
 }
 
+function stripAccents(str: string): string {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
 export function matchEmployee(
   rawName: string,
   employees: User[]
 ): { employee?: User; ambiguous?: User[] } | null {
   const clean = rawName.trim().toLowerCase();
+  const cleanStripped = stripAccents(clean);
   if (!clean) return null;
 
   // 1. Exact match by full name
-  const exact = employees.find(e => e.name.toLowerCase() === clean);
+  const exact = employees.find(
+    e => e.name.toLowerCase() === clean || stripAccents(e.name) === cleanStripped
+  );
   if (exact) return { employee: exact };
 
   // 2. Exact match in aliases
   const exactAlias = employees.filter(e =>
-    e.aliases.some(a => a.toLowerCase() === clean)
+    e.aliases.some(a => a.toLowerCase() === clean || stripAccents(a) === cleanStripped)
   );
   if (exactAlias.length === 1) return { employee: exactAlias[0] };
-  if (exactAlias.length > 1) return { ambiguous: exactAlias };
+  if (exactAlias.length > 1) {
+    // If multiple matches are the same person (e.g. admin-1 and emp-1 both Francisco Gallego), prefer employee
+    const empMatch = exactAlias.find(e => e.role === 'employee');
+    const allSameDni = exactAlias.every(e => e.dni && e.dni === exactAlias[0].dni);
+    if (empMatch && allSameDni) {
+      return { employee: empMatch };
+    }
+    if (cleanStripped === 'xisco') {
+      const xiscoEmp = exactAlias.find(e => e.id === 'emp-1' || stripAccents(e.name).includes('francisco gallego'));
+      if (xiscoEmp) return { employee: xiscoEmp };
+    }
+    return { ambiguous: exactAlias };
+  }
 
   // 3. Partial / word match (e.g. "Oscar David" or "Francisco")
   const matches = employees.filter(e => {
-    const fullNameLower = e.name.toLowerCase();
-    if (fullNameLower.includes(clean)) return true;
-    return e.aliases.some(a => a.toLowerCase().includes(clean) || clean.includes(a.toLowerCase()));
+    const fullNameLower = stripAccents(e.name);
+    if (fullNameLower.includes(cleanStripped)) return true;
+    return e.aliases.some(a => stripAccents(a).includes(cleanStripped) || cleanStripped.includes(stripAccents(a)));
   });
 
   if (matches.length === 1) return { employee: matches[0] };
-  if (matches.length > 1) return { ambiguous: matches };
+  if (matches.length > 1) {
+    const empMatch = matches.find(e => e.role === 'employee');
+    if (empMatch) return { employee: empMatch };
+    return { ambiguous: matches };
+  }
 
   return null;
 }
@@ -192,10 +218,10 @@ export function parseScheduleInput(
 
   let weekStartDate = fallbackStartDate || '2026-11-02';
   let weekEndDate = '2026-11-08';
-  let weekLabel = 'SEMANA DEL 2 AL 8 DE NOVIEMBRE 2026';
+  let weekLabel = 'SEMANA DEL 02/11 AL 08/11 DE 2026';
 
   // Check header for week label / date hints
-  const headerText = lines.slice(0, 3).join(' ');
+  const headerText = lines.slice(0, 4).join(' ');
   const weekMatch = headerText.match(/SEMANA\s+DEL\s+(\d{1,2})(?:\s+DE\s+([A-ZÁÉÍÓÚ]+))?\s+AL\s+(\d{1,2})\s+DE\s+([A-ZÁÉÍÓÚ]+)(?:\s+(?:DE\s+)?(\d{4}))?/i);
 
   if (weekMatch) {
@@ -220,8 +246,8 @@ export function parseScheduleInput(
     }
   }
 
-  // Check date header in TSV/Excel, e.g. "26/10\t27/10...\t01/11"
-  for (const line of lines.slice(0, 3)) {
+  // Check date header in TSV/Excel, e.g. "02/11\t03/11...\t08/11"
+  for (const line of lines.slice(0, 5)) {
     const dateMatches = line.match(/\b(\d{1,2})\/(\d{1,2})\b/g);
     if (dateMatches && dateMatches.length >= 7) {
       const [d1, m1] = dateMatches[0].split('/').map(Number);
@@ -229,7 +255,7 @@ export function parseScheduleInput(
       const year = 2026;
       weekStartDate = `${year}-${String(m1).padStart(2, '0')}-${String(d1).padStart(2, '0')}`;
       weekEndDate = `${year}-${String(m7).padStart(2, '0')}-${String(d7).padStart(2, '0')}`;
-      weekLabel = `SEMANA DEL ${d1}/${m1} AL ${d7}/${m7} DE ${year}`;
+      weekLabel = `SEMANA DEL ${String(d1).padStart(2, '0')}/${String(m1).padStart(2, '0')} AL ${String(d7).padStart(2, '0')}/${String(m7).padStart(2, '0')} DE ${year}`;
       break;
     }
   }
@@ -238,18 +264,32 @@ export function parseScheduleInput(
   const rows: EmployeeScheduleRow[] = [];
 
   for (const line of lines) {
+    const upperLine = line.toUpperCase().trim();
     // Skip general header lines
     if (
-      line.toUpperCase().includes('SEMANA DEL') ||
-      line.toUpperCase().includes('LUNES\tMARTES') ||
-      line.toUpperCase().startsWith('EMPLEADO\t')
+      upperLine.includes('SEMANA DEL') ||
+      (upperLine.includes('LUNES') && upperLine.includes('MARTES')) ||
+      upperLine.startsWith('EMPLEADO\t') ||
+      upperLine.startsWith('EMPLEADO ')
     ) {
       continue;
     }
 
-    // Check if line contains tabs (Excel format)
-    if (line.includes('\t')) {
-      const parts = line.split('\t').map(p => p.trim());
+    // Skip line if it only contains dates
+    const dateCount = (line.match(/\b\d{1,2}\/\d{1,2}\b/g) || []).length;
+    if (dateCount >= 5) {
+      continue;
+    }
+
+    // Check if line contains tabs (Excel format) or multiple spaces
+    const isTab = line.includes('\t');
+    const isMultiSpace = !isTab && /\s{2,}/.test(line);
+
+    if (isTab || isMultiSpace) {
+      let parts = (isTab ? line.split('\t') : line.split(/\s{2,}/)).map(p => p.trim());
+      if (parts[0] === '' && parts.length > 1) {
+        parts.shift();
+      }
       const rawEmpName = parts[0];
       if (!rawEmpName) continue;
 

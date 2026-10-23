@@ -276,3 +276,17 @@ export async function syncDatabaseToFirestore(data: {
 
   return { syncedCount: count, errors };
 }
+
+export async function getEmployeesFromFirestore(): Promise<any[]> {
+  try {
+    const snap = await getDocs(collection(db, 'users'));
+    const list: any[] = [];
+    snap.forEach(d => {
+      list.push(d.data());
+    });
+    return list;
+  } catch (err) {
+    console.error('Error fetching users from Firestore:', err);
+    return [];
+  }
+}
