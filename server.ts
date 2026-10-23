@@ -26,8 +26,10 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 app.use(express.json({ limit: '10mb' }));
 
-// Data Directory
-const DATA_DIR = path.resolve(__dirname, 'data');
+// Data Directory (Supports local, Cloud Run, and Vercel serverless /tmp)
+const DATA_DIR = process.env.VERCEL
+  ? path.resolve('/tmp', 'hotel-data')
+  : path.resolve(__dirname, 'data');
 const BACKUPS_DIR = path.resolve(DATA_DIR, 'backups');
 const DB_FILE = path.resolve(DATA_DIR, 'database.json');
 
@@ -36,6 +38,18 @@ if (!fs.existsSync(DATA_DIR)) {
 }
 if (!fs.existsSync(BACKUPS_DIR)) {
   fs.mkdirSync(BACKUPS_DIR, { recursive: true });
+}
+
+// In Vercel serverless, seed initial DB from project files if not exists in /tmp
+if (process.env.VERCEL && !fs.existsSync(DB_FILE)) {
+  const localDb = path.resolve(__dirname, 'data', 'database.json');
+  if (fs.existsSync(localDb)) {
+    try {
+      fs.copyFileSync(localDb, DB_FILE);
+    } catch {
+      // Handled in loadDatabase
+    }
+  }
 }
 
 interface DatabaseSchema {
@@ -1956,6 +1970,12 @@ async function startServer() {
   });
 }
 
-startServer().catch(err => {
-  console.error('Failed to start server:', err);
-});
+// Only launch standalone HTTP server when not in Vercel Serverless environment
+if (!process.env.VERCEL) {
+  startServer().catch(err => {
+    console.error('Failed to start server:', err);
+  });
+}
+
+export { app };
+export default app;

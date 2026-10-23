@@ -371,6 +371,66 @@
   ],
   "auditLogs": [
     {
+      "id": "log-1792780904480-0hv3m",
+      "timestamp": "2026-10-23T18:41:44.480Z",
+      "userId": "admin-1",
+      "userName": "Xisco G. H.",
+      "action": "Test de conexión con la base de datos",
+      "entity": "ajustes",
+      "newValue": "test de conexion de xisco realizado con exito",
+      "notes": "Latencia: 14ms • Firestore y Local"
+    },
+    {
+      "id": "log-1792780616767-8z64u",
+      "timestamp": "2026-10-23T18:36:56.767Z",
+      "userId": "admin-1",
+      "userName": "Xisco G. H.",
+      "action": "Test de conexión con la base de datos",
+      "entity": "ajustes",
+      "newValue": "test de conexion de xisco realizado con exito",
+      "notes": "Latencia: 85ms • Firestore y Local"
+    },
+    {
+      "id": "log-1792780611581-pesnv",
+      "timestamp": "2026-10-23T18:36:51.581Z",
+      "userId": "admin-1",
+      "userName": "Xisco G. H.",
+      "action": "Test de conexión con la base de datos",
+      "entity": "ajustes",
+      "newValue": "test de conexion de xisco realizado con exito",
+      "notes": "Latencia: 116ms • Firestore y Local"
+    },
+    {
+      "id": "log-1792780446436-rbiug",
+      "timestamp": "2026-10-23T18:34:06.436Z",
+      "userId": "admin-1",
+      "userName": "Xisco G. H.",
+      "action": "Test de conexión con la base de datos",
+      "entity": "ajustes",
+      "newValue": "test de conexion de xisco realizado con exito",
+      "notes": "Latencia: 158ms • Firestore y Local"
+    },
+    {
+      "id": "log-1792780444130-06wxm",
+      "timestamp": "2026-10-23T18:34:04.130Z",
+      "userId": "admin-1",
+      "userName": "Xisco G. H.",
+      "action": "Test de conexión con la base de datos",
+      "entity": "ajustes",
+      "newValue": "test de conexion de xisco realizado con exito",
+      "notes": "Latencia: 270ms • Firestore y Local"
+    },
+    {
+      "id": "log-1792780317798-u5sk8",
+      "timestamp": "2026-10-23T18:31:57.798Z",
+      "userId": "admin-1",
+      "userName": "Xisco G. H.",
+      "action": "Test de conexión con la base de datos",
+      "entity": "ajustes",
+      "newValue": "test de conexion de xisco realizado con exito",
+      "notes": "Latencia: 133ms • Firestore y Local"
+    },
+    {
       "id": "log-1792779274926-8c7cc",
       "timestamp": "2026-10-23T18:14:34.926Z",
       "userId": "admin-1",
