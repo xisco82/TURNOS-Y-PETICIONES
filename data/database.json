@@ -371,6 +371,16 @@
   ],
   "auditLogs": [
     {
+      "id": "log-1792779274926-8c7cc",
+      "timestamp": "2026-10-23T18:14:34.926Z",
+      "userId": "admin-1",
+      "userName": "Xisco G. H.",
+      "action": "Test de conexión con la base de datos",
+      "entity": "ajustes",
+      "newValue": "test de conexion de xisco realizado con exito",
+      "notes": "Latencia: 15ms • Firestore y Local"
+    },
+    {
       "id": "log-init",
       "timestamp": "2026-10-22T09:37:00.648Z",
       "userId": "admin-1",

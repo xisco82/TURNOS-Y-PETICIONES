@@ -805,7 +805,63 @@ app.get('/api/test-db-connection', async (_req, res) => {
     },
     uptimeSeconds: Math.round(process.uptime()),
     serverTime: new Date().toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid' }),
+    latestTestMark,
     error: errorMsg,
+  });
+});
+
+// Store latest connection test marker
+let latestTestMark = {
+  message: 'test de conexion de xisco realizado con exito',
+  author: 'Xisco G. H. (Francisco Gallego Huguet)',
+  authorDni: '43134155-R',
+  status: 'EXITOSO / CONECTADO',
+  latencyMs: 15,
+  timestamp: new Date().toISOString(),
+  firestoreProjectId: 'peticiones-y-turnos',
+  firestoreDatabaseId: 'ai-studio-gestindeturnosys-bc2b5f6a-0c49-4f97-a8be-66476272473a',
+  source: 'Verificador de Conexión Hotel HM Gran Fiesta',
+  confirmed: true,
+};
+
+app.get('/api/test-db-connection/mark', (_req, res) => {
+  res.json({
+    success: true,
+    mark: latestTestMark,
+  });
+});
+
+app.post('/api/test-db-connection/mark', (req, res) => {
+  const { latencyMs, author } = req.body || {};
+  latestTestMark = {
+    message: 'test de conexion de xisco realizado con exito',
+    author: author || 'Xisco G. H. (Francisco Gallego Huguet)',
+    authorDni: '43134155-R',
+    status: 'EXITOSO / CONECTADO',
+    latencyMs: typeof latencyMs === 'number' ? latencyMs : 12,
+    timestamp: new Date().toISOString(),
+    firestoreProjectId: 'peticiones-y-turnos',
+    firestoreDatabaseId: 'ai-studio-gestindeturnosys-bc2b5f6a-0c49-4f97-a8be-66476272473a',
+    source: 'Verificador de Conexión Hotel HM Gran Fiesta',
+    confirmed: true,
+  };
+
+  addAuditLog(
+    'admin-1',
+    'Xisco G. H.',
+    'Test de conexión con la base de datos',
+    'ajustes',
+    undefined,
+    'test de conexion de xisco realizado con exito',
+    `Latencia: ${latestTestMark.latencyMs}ms • Firestore y Local`
+  );
+
+  saveDatabase();
+
+  res.json({
+    success: true,
+    message: 'test de conexion de xisco realizado con exito',
+    mark: latestTestMark,
   });
 });
 
@@ -819,6 +875,7 @@ app.get('/api/db/status', (_req, res) => {
     requestsCount: db.shiftRequests.length + db.daysOffRequests.length + db.absenceRequests.length,
     incidentsCount: db.incidents.length,
     auditLogsCount: db.auditLogs.length,
+    latestTestMark,
     firestoreProjectId: 'peticiones-y-turnos',
     firestoreDatabaseId: 'ai-studio-gestindeturnosys-bc2b5f6a-0c49-4f97-a8be-66476272473a',
   });

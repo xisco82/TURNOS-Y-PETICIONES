@@ -96,6 +96,22 @@
         "timezone": { "type": "string", "maxLength": 100 }
       },
       "required": ["id", "companyName"]
+    },
+    "ConnectionTestLog": {
+      "title": "ConnectionTestLog",
+      "description": "Registry of connection tests performed by Xisco and administrators",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "message": { "type": "string", "maxLength": 500 },
+        "author": { "type": "string", "maxLength": 150 },
+        "authorDni": { "type": "string", "maxLength": 30 },
+        "status": { "type": "string", "maxLength": 50 },
+        "latencyMs": { "type": "number" },
+        "timestamp": { "type": "string", "maxLength": 100 },
+        "source": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["id", "message", "status", "timestamp"]
     }
   },
   "firestore": {
@@ -122,6 +138,10 @@
     "/settings/{settingId}": {
       "schema": "AppSettings",
       "description": "Global application configuration"
+    },
+    "/connection_tests/{testId}": {
+      "schema": "ConnectionTestLog",
+      "description": "Connection test records and markers written by Xisco and system"
     }
   }
 }

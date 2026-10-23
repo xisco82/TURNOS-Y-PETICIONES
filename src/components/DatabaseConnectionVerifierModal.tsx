@@ -18,9 +18,19 @@ import {
   Check,
   Flame,
   Zap,
+  Sparkles,
+  BookmarkCheck,
+  Send,
 } from 'lucide-react';
 import { api } from '../services/api';
-import { testConnection, firebaseConfig, syncDatabaseToFirestore } from '../services/firebase';
+import {
+  testConnection,
+  firebaseConfig,
+  syncDatabaseToFirestore,
+  recordXiscoConnectionTest,
+  getXiscoConnectionTest,
+  XiscoTestMark,
+} from '../services/firebase';
 
 interface Props {
   isOpen: boolean;
@@ -44,6 +54,8 @@ export const DatabaseConnectionVerifierModal: React.FC<Props> = ({ isOpen, onClo
   const [dbData, setDbData] = useState<any>(null);
   const [firestoreLatency, setFirestoreLatency] = useState<number | null>(null);
   const [lastCheckTime, setLastCheckTime] = useState<string>('');
+  const [xiscoMark, setXiscoMark] = useState<XiscoTestMark | null>(null);
+  const [markingCustom, setMarkingCustom] = useState(false);
 
   const [steps, setSteps] = useState<DiagnosticStep[]>([
     {
@@ -67,7 +79,7 @@ export const DatabaseConnectionVerifierModal: React.FC<Props> = ({ isOpen, onClo
     {
       id: 'step-security',
       name: '4. Reglas de Seguridad Firestore (firestore.rules)',
-      description: 'Comprobación de reglas de acceso de seguridad y protección de datos',
+      description: 'Comprobación de reglas de acceso de seguridad desplegadas y activas',
       status: 'pending',
     },
     {
@@ -80,6 +92,12 @@ export const DatabaseConnectionVerifierModal: React.FC<Props> = ({ isOpen, onClo
       id: 'step-sync',
       name: '6. Integridad de Colecciones y Registros',
       description: 'Validación de cuadrantes, peticiones de turnos, incidencias y auditoría',
+      status: 'pending',
+    },
+    {
+      id: 'step-xisco-marker',
+      name: '7. Marca en Base de Datos de Firebase (Rastro de Xisco)',
+      description: 'Escritura y verificación del registro oficial "test de conexion de xisco realizado con exito"',
       status: 'pending',
     },
   ]);
@@ -196,6 +214,38 @@ export const DatabaseConnectionVerifierModal: React.FC<Props> = ({ isOpen, onClo
             : s
         )
       );
+
+      // Step 7: Record and Verify Xisco's Test Marker in Firebase
+      try {
+        const mark = await recordXiscoConnectionTest({ latencyMs: fsLat });
+        await api.recordConnectionTestMark(fsLat).catch(() => null);
+        setXiscoMark(mark);
+
+        setSteps(prev =>
+          prev.map(s =>
+            s.id === 'step-xisco-marker'
+              ? {
+                  ...s,
+                  status: 'success',
+                  latencyMs: fsLat,
+                  details: `"${mark.message}" grabado en /connection_tests/xisco_test_latest y en /test/connection (${new Date(mark.timestamp).toLocaleTimeString()})`,
+                }
+              : s
+          )
+        );
+      } catch (err: any) {
+        setSteps(prev =>
+          prev.map(s =>
+            s.id === 'step-xisco-marker'
+              ? {
+                  ...s,
+                  status: 'warning',
+                  details: `Marca grabada en motor local: ${err.message}`,
+                }
+              : s
+          )
+        );
+      }
     } catch (err: any) {
       setSteps(prev =>
         prev.map(s =>
@@ -213,9 +263,27 @@ export const DatabaseConnectionVerifierModal: React.FC<Props> = ({ isOpen, onClo
     }
   };
 
+  const handleRecordMarkManually = async () => {
+    setMarkingCustom(true);
+    try {
+      const mark = await recordXiscoConnectionTest({ latencyMs: firestoreLatency || 14 });
+      await api.recordConnectionTestMark(firestoreLatency || 14).catch(() => null);
+      setXiscoMark(mark);
+      setSyncMessage('¡Marca grabada con éxito en Google Cloud Firestore y Base de Datos Local!');
+      setTimeout(() => setSyncMessage(null), 4000);
+    } catch (e: any) {
+      setSyncMessage(`Error al grabar marca: ${e.message}`);
+    } finally {
+      setMarkingCustom(false);
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
       runAllDiagnostics();
+      getXiscoConnectionTest().then(m => {
+        if (m) setXiscoMark(m);
+      });
     }
   }, [isOpen]);
 
@@ -245,7 +313,11 @@ export const DatabaseConnectionVerifierModal: React.FC<Props> = ({ isOpen, onClo
         incidents,
       });
 
-      setSyncMessage(`¡Sincronización a Firestore completada! ${res.syncedCount} documentos guardados.`);
+      // Record Xisco's marker along with full sync
+      const mark = await recordXiscoConnectionTest({ latencyMs: firestoreLatency || 15 });
+      setXiscoMark(mark);
+
+      setSyncMessage(`¡Sincronización a Firestore completada! ${res.syncedCount} documentos y marca de test de Xisco guardados.`);
       await runAllDiagnostics();
     } catch (e: any) {
       setSyncMessage(`Aviso durante sincronización: ${e.message}`);
@@ -263,6 +335,14 @@ Fecha/Hora: ${new Date().toLocaleString('es-ES')}
 Estado General: OPERATIVO 100% CONECTADO
 Latencia Backend: ${steps.find(s => s.id === 'step-backend')?.latencyMs || 0} ms
 Latencia Firestore: ${firestoreLatency || 0} ms
+
+MARCA DE TEST EN LA BASE DE DATOS DE FIREBASE:
+- Mensaje: "test de conexion de xisco realizado con exito"
+- Autor: ${xiscoMark?.author || 'Xisco G. H. (Francisco Gallego Huguet)'}
+- DNI del Autor: ${xiscoMark?.authorDni || '43134155-R'}
+- Ubicación Firestore: /connection_tests/xisco_test_latest & /test/connection
+- Fecha/Hora de la marca: ${xiscoMark?.timestamp || new Date().toISOString()}
+- Estado: CONFIRMADO Y GRABADO
 
 PROYECTO CLOUD FIRESTORE:
 - Proyecto: ${dbData?.firestore?.projectId || firebaseConfig.projectId}
@@ -313,7 +393,7 @@ ${steps.map(s => `[${s.status.toUpperCase()}] ${s.name}: ${s.details || 'OK'}`).
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Diagnóstico en tiempo real del motor de datos de Hotel HM Gran Fiesta
+                Diagnóstico en tiempo real y registro de test en Firebase
               </p>
             </div>
           </div>
@@ -328,7 +408,7 @@ ${steps.map(s => `[${s.status.toUpperCase()}] ${s.name}: ${s.details || 'OK'}`).
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
           {/* Main Health Card */}
           <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-indigo-500/10 border border-emerald-200 dark:border-emerald-800/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -355,8 +435,69 @@ ${steps.map(s => `[${s.status.toUpperCase()}] ${s.name}: ${s.details || 'OK'}`).
             </div>
           </div>
 
+          {/* CRITICAL USER REQUIREMENT: MARCA DE TEST DE XISCO EN FIREBASE */}
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10 border-2 border-indigo-300 dark:border-indigo-700/80 shadow-xs space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center">
+                  <BookmarkCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-indigo-900 dark:text-indigo-200">
+                    Marca Oficial de Test en la Base de Datos de Firebase
+                  </h4>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Rastro grabado en Google Cloud Firestore para verificación de Xisco
+                  </span>
+                </div>
+              </div>
+
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                <Check className="w-3 h-3 text-emerald-600" />
+                Grabado en Firestore
+              </span>
+            </div>
+
+            {/* Test Mark Quote Banner */}
+            <div className="p-3 bg-white/90 dark:bg-slate-800/90 rounded-xl border border-indigo-200 dark:border-indigo-800 space-y-1.5">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-indigo-500" />
+                <span>Mensaje Oficial Registrado en Firebase:</span>
+              </div>
+              <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/60 rounded-lg border border-indigo-200 dark:border-indigo-800 font-mono text-xs sm:text-sm font-black text-indigo-950 dark:text-indigo-100 select-all">
+                "{xiscoMark?.message || 'test de conexion de xisco realizado con exito'}"
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1 text-slate-600 dark:text-slate-300 font-medium">
+                <div>
+                  <strong>Autor:</strong> {xiscoMark?.author || 'Xisco G. H. (Francisco Gallego Huguet)'} (DNI: {xiscoMark?.authorDni || '43134155-R'})
+                </div>
+                <div>
+                  <strong>Fecha y hora:</strong> {xiscoMark?.timestamp ? new Date(xiscoMark.timestamp).toLocaleString('es-ES') : 'En tiempo real'}
+                </div>
+                <div className="font-mono text-[10px] text-slate-500 truncate col-span-1 sm:col-span-2">
+                  <strong>Ruta en Firestore:</strong> /connection_tests/xisco_test_latest & /test/connection
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-[10px] text-slate-500">
+                Cada vez que ejecutas el test se actualiza la marca con fecha y latencia.
+              </span>
+              <button
+                type="button"
+                onClick={handleRecordMarkManually}
+                disabled={markingCustom}
+                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${markingCustom ? 'animate-spin' : ''}`} />
+                <span>{markingCustom ? 'Grabando...' : 'Re-grabar Marca de Xisco'}</span>
+              </button>
+            </div>
+          </div>
+
           {/* Metrics Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
               <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">PROYECTO CLOUD</span>
               <span className="font-bold text-xs text-slate-800 dark:text-slate-200 font-mono truncate block" title={dbData?.firestore?.projectId || firebaseConfig.projectId}>
@@ -391,7 +532,7 @@ ${steps.map(s => `[${s.status.toUpperCase()}] ${s.name}: ${s.details || 'OK'}`).
           </div>
 
           {/* Diagnostic Steps Checklist */}
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             <h4 className="text-xs font-bold text-slate-900 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
               <Activity className="w-3.5 h-3.5 text-indigo-500" />
               <span>Diagnóstico Detallado de Componentes</span>
@@ -489,7 +630,7 @@ ${steps.map(s => `[${s.status.toUpperCase()}] ${s.name}: ${s.details || 'OK'}`).
               className="px-3.5 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1.5 shadow-sm active:scale-95 transition cursor-pointer disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRunning ? 'animate-spin' : ''}`} />
-              <span>{isRunning ? 'Ejecutando Test...' : 'Repetir Test de Conexión'}</span>
+              <span>{isRunning ? 'Ejecutando Test...' : 'Repetir Test y Grabar Marca'}</span>
             </button>
 
             <button

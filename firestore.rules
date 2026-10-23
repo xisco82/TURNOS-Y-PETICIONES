@@ -31,9 +31,14 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Connection testing
+    // Connection testing & Xisco test markers
     match /test/connection {
-      allow read: if true;
+      allow read, write: if true;
+    }
+
+    match /connection_tests/{testId} {
+      allow read, create, update: if true;
+      allow delete: if isAdmin();
     }
 
     // Users collection

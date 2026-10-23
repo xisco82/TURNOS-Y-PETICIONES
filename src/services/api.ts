@@ -169,9 +169,36 @@ export const api = {
     };
     uptimeSeconds: number;
     serverTime: string;
+    latestTestMark?: {
+      message: string;
+      author: string;
+      authorDni: string;
+      status: string;
+      latencyMs: number;
+      timestamp: string;
+      firestoreProjectId: string;
+      firestoreDatabaseId: string;
+      source: string;
+      confirmed: boolean;
+    };
     error: string | null;
   }> {
     return request('/api/test-db-connection');
+  },
+
+  async recordConnectionTestMark(latencyMs?: number): Promise<{
+    success: boolean;
+    message: string;
+    mark: any;
+  }> {
+    return request('/api/test-db-connection/mark', {
+      method: 'POST',
+      body: JSON.stringify({ latencyMs }),
+    });
+  },
+
+  async getConnectionTestMark(): Promise<{ success: boolean; mark: any }> {
+    return request('/api/test-db-connection/mark');
   },
 
   // Users

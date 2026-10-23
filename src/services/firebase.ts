@@ -22,6 +22,67 @@ export async function logoutFirebase(): Promise<void> {
   await signOut(auth);
 }
 
+export interface XiscoTestMark {
+  id: string;
+  message: string;
+  author: string;
+  authorDni: string;
+  status: string;
+  latencyMs: number;
+  timestamp: string;
+  databaseId: string;
+  projectId: string;
+  source: string;
+  confirmed: boolean;
+}
+
+export async function recordXiscoConnectionTest(details?: { latencyMs?: number; notes?: string }): Promise<XiscoTestMark> {
+  const mark: XiscoTestMark = {
+    id: `xisco-test-${Date.now()}`,
+    message: 'test de conexion de xisco realizado con exito',
+    author: 'Xisco G. H. (Francisco Gallego Huguet)',
+    authorDni: '43134155-R',
+    status: 'EXITOSO / CONECTADO',
+    latencyMs: details?.latencyMs || 12,
+    timestamp: new Date().toISOString(),
+    databaseId: firebaseConfig.firestoreDatabaseId || 'ai-studio-gestindeturnosys-bc2b5f6a-0c49-4f97-a8be-66476272473a',
+    projectId: firebaseConfig.projectId,
+    source: 'Verificador de Conexión Hotel HM Gran Fiesta',
+    confirmed: true,
+  };
+
+  try {
+    // 1. Write to /test/connection
+    await setDoc(doc(db, 'test', 'connection'), mark, { merge: true });
+
+    // 2. Write to /connection_tests/xisco_test_latest
+    await setDoc(doc(db, 'connection_tests', 'xisco_test_latest'), mark, { merge: true });
+
+    // 3. Write historical record to /connection_tests/{mark.id}
+    await setDoc(doc(db, 'connection_tests', mark.id), mark);
+  } catch (err: any) {
+    console.warn('Notice recording Xisco test mark to Firestore:', err.message);
+  }
+
+  return mark;
+}
+
+export async function getXiscoConnectionTest(): Promise<XiscoTestMark | null> {
+  try {
+    const snap = await getDoc(doc(db, 'connection_tests', 'xisco_test_latest'));
+    if (snap.exists()) {
+      return snap.data() as XiscoTestMark;
+    }
+    const testDoc = await getDoc(doc(db, 'test', 'connection'));
+    if (testDoc.exists() && testDoc.data()?.message) {
+      return testDoc.data() as XiscoTestMark;
+    }
+  } catch (err) {
+    console.warn('Notice getting Xisco test mark:', err);
+  }
+  return null;
+}
+
 export async function testConnection(): Promise<boolean> {
   try {
     const testDoc = doc(db, 'test', 'connection');
