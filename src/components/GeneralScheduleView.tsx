@@ -10,11 +10,14 @@ import {
   Clock,
   Sparkles,
   Download,
+  Palette,
+  Check,
 } from 'lucide-react';
 import { WeekSchedule } from '../types';
 import { formatDaySpanish, getWeekDates } from '../utils/scheduleParser';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { getShiftStyle, PRESET_TEXT_COLORS } from '../utils/shiftStyles';
 
 export const GeneralScheduleView: React.FC = () => {
   const { user } = useAuth();
@@ -24,6 +27,28 @@ export const GeneralScheduleView: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   const isAdmin = user?.role === 'admin';
+  const [showColorToolbar, setShowColorToolbar] = useState(false);
+  const [selectedCodeToColor, setSelectedCodeToColor] = useState('AP');
+  const [customColorOverrides, setCustomColorOverrides] = useState<Record<string, { textColor?: string }>>(() => {
+    try {
+      const raw = localStorage.getItem('schedule_custom_colors');
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return {
+      AP: { textColor: '#16a34a' },
+    };
+  });
+
+  const handleSetCodeColor = (code: string, color: string) => {
+    const updated = {
+      ...customColorOverrides,
+      [code.toUpperCase()]: { textColor: color },
+    };
+    setCustomColorOverrides(updated);
+    try {
+      localStorage.setItem('schedule_custom_colors', JSON.stringify(updated));
+    } catch {}
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -98,6 +123,20 @@ export const GeneralScheduleView: React.FC = () => {
             />
           </div>
 
+          {/* Color Customizer Button */}
+          <button
+            onClick={() => setShowColorToolbar(!showColorToolbar)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition ${
+              showColorToolbar
+                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-50'
+            }`}
+            title="Pintar o personalizar el color de la letra para cualquier turno (AP, L, M, T, etc.)"
+          >
+            <Palette className="w-3.5 h-3.5" />
+            <span>Pintar Colores</span>
+          </button>
+
           <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
             <button
               onClick={() => setSelectedWeekIndex(prev => Math.max(0, prev - 1))}
@@ -121,6 +160,73 @@ export const GeneralScheduleView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Expandable Color Toolbar (Personalizar colores de letra para turnos) */}
+      {showColorToolbar && (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-indigo-100 dark:border-indigo-900/40 shadow-xs flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-top-1">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+              <Palette className="w-4 h-4 text-indigo-600" />
+              <span>Color de letra para:</span>
+            </span>
+
+            {/* Shift code picker */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+              {['AP', 'L', 'M', 'T', 'N', 'BP'].map(c => (
+                <button
+                  key={c}
+                  onClick={() => setSelectedCodeToColor(c)}
+                  className={`px-2.5 py-1 text-xs font-extrabold rounded-lg transition ${
+                    selectedCodeToColor === c
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+
+            {/* Quick color swatches */}
+            <div className="flex items-center gap-1.5">
+              {PRESET_TEXT_COLORS.map(p => {
+                const isSelected = customColorOverrides[selectedCodeToColor]?.textColor === p.value;
+                return (
+                  <button
+                    key={p.value}
+                    onClick={() => handleSetCodeColor(selectedCodeToColor, p.value)}
+                    className={`w-6 h-6 rounded-full border-2 transition transform active:scale-90 flex items-center justify-center ${
+                      isSelected ? 'border-indigo-600 scale-110 shadow-sm' : 'border-slate-200 dark:border-slate-700 hover:scale-105'
+                    }`}
+                    style={{ backgroundColor: p.value }}
+                    title={`Pintar letra de ${selectedCodeToColor} en ${p.name}`}
+                  >
+                    {isSelected && <Check className="w-3 h-3 text-white mix-blend-difference" />}
+                  </button>
+                );
+              })}
+
+              {/* Native color picker for any custom color */}
+              <label className="cursor-pointer relative flex items-center gap-1 ml-1 text-[11px] font-semibold text-slate-500 hover:text-indigo-600">
+                <input
+                  type="color"
+                  value={customColorOverrides[selectedCodeToColor]?.textColor || '#000000'}
+                  onChange={e => handleSetCodeColor(selectedCodeToColor, e.target.value)}
+                  className="w-6 h-6 rounded-full p-0 border-0 cursor-pointer opacity-0 absolute"
+                />
+                <span className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+                  🎨 Selector libre
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <span className="bg-yellow-400 text-black px-2 py-0.5 rounded font-extrabold text-[10px]">L: Casilla amarilla / Letra negra</span>
+            <span className="text-emerald-600 font-extrabold text-[10px]">AP: Verde</span>
+          </div>
+        </div>
+      )}
 
       {/* Grid Table */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
@@ -180,33 +286,23 @@ export const GeneralScheduleView: React.FC = () => {
                         displayLabel = 'No disponible';
                       }
 
-                      let badgeColor = 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
-                      const code = (shift?.rawText || '').trim().toUpperCase();
-                      if (code === 'M') {
-                        badgeColor = 'bg-sky-50 text-sky-800 dark:bg-sky-950/70 dark:text-sky-200 border border-sky-200/80 dark:border-sky-800';
-                      } else if (code === 'T') {
-                        badgeColor = 'bg-amber-50 text-amber-800 dark:bg-amber-950/70 dark:text-amber-200 border border-amber-200/80 dark:border-amber-800';
-                      } else if (code === 'N' || shift?.isOvernight) {
-                        badgeColor = 'bg-violet-50 text-violet-800 dark:bg-violet-950/70 dark:text-violet-200 border border-violet-200/80 dark:border-violet-800';
-                      } else if (code === 'BP' || shift?.type === 'sick') {
-                        badgeColor = 'bg-rose-50 text-rose-800 dark:bg-rose-950/70 dark:text-rose-200 border border-rose-200/80 dark:border-rose-800';
-                      } else if (code === 'V' || shift?.type === 'vacation') {
-                        badgeColor = 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-200 border border-emerald-200/80 dark:border-emerald-800';
-                      } else if (shift?.type === 'holiday') {
-                        badgeColor = 'bg-purple-50 text-purple-800 dark:bg-purple-950/70 dark:text-purple-200 border border-purple-200/80 dark:border-purple-800';
-                      } else if (shift?.type === 'work') {
-                        badgeColor = 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/70 dark:text-indigo-200 border border-indigo-200/80 dark:border-indigo-800';
-                      }
+                      const shiftStyle = getShiftStyle(shift, customColorOverrides);
 
                       return (
                         <td
                           key={dateStr}
-                          className="py-2 px-2 text-center border-r border-slate-100 dark:border-slate-800/60"
+                          className={shiftStyle.tdClasses}
                         >
-                          <div className={`p-1.5 rounded-lg text-center ${badgeColor}`}>
-                            <div className="font-semibold text-xs leading-tight">{displayLabel}</div>
+                          <div
+                            className={shiftStyle.badgeClasses}
+                            style={shiftStyle.style}
+                          >
+                            <div className="font-extrabold text-xs leading-tight">{displayLabel}</div>
                             {shift && shift.hours > 0 && (
-                              <div className="text-[10px] text-slate-400 mt-0.5">
+                              <div
+                                className="text-[10px] mt-0.5 opacity-80"
+                                style={{ color: shiftStyle.style.color }}
+                              >
                                 {shift.hours} h {shift.isOvernight && '🌙'}
                               </div>
                             )}

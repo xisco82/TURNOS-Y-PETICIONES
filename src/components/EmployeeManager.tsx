@@ -29,6 +29,7 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editAliasesText, setEditAliasesText] = useState('');
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
 
   // Form state
@@ -44,6 +45,11 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
   const [newPasswordCreated, setNewPasswordCreated] = useState<{ name: string; pass: string } | null>(null);
   const [errorNotification, setErrorNotification] = useState<string | null>(null);
   const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
+
+  const startEdit = (user: User) => {
+    setEditingUser(user);
+    setEditAliasesText(user.aliases ? user.aliases.join(', ') : '');
+  };
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -78,10 +84,14 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
     if (!editingUser) return;
 
     try {
+      const cleanAliases = editAliasesText
+        ? editAliasesText.split(',').map(s => s.trim()).filter(Boolean)
+        : [];
+
       await api.updateUser(editingUser.id, {
         name: editingUser.name,
         dni: editingUser.dni,
-        aliases: editingUser.aliases,
+        aliases: cleanAliases,
         email: editingUser.email,
         phone: editingUser.phone,
         status: editingUser.status,
@@ -105,9 +115,10 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
 
   const handleDeleteConfirmed = async (mode: 'deactivate' | 'permanent') => {
     if (!deletingUser) return;
+    const targetUser = deletingUser;
+    setDeletingUser(null);
     try {
-      await api.deleteUser(deletingUser.id, mode);
-      setDeletingUser(null);
+      await api.deleteUser(targetUser.id, mode);
       onRefresh();
     } catch (err: any) {
       setErrorNotification(err.message || 'Error al eliminar');

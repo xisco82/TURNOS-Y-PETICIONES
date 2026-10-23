@@ -40,9 +40,9 @@ export function calculateShiftHours(dateStr: string, startTime: string, endTime:
 
   const startMins = sh * 60 + sm;
   let endMins = eh * 60 + em;
-  const isOvernight = endMins <= startMins;
+  const isOvernight = endMins <= startMins || (sh === 0 && eh <= 8);
 
-  if (isOvernight) {
+  if (endMins <= startMins) {
     endMins += 24 * 60;
   }
 
@@ -89,14 +89,13 @@ export function parseShiftText(rawText: string, dateStr: string): ShiftDetail | 
     return { type: 'holiday', rawText: trimmed, hours: 0 };
   }
   if (upper === 'M' || upper === 'MAÑANA' || upper === 'MANANA') {
-    return { type: 'work', startTime: '07:00', endTime: '15:00', rawText: trimmed, hours: 8 };
+    return { type: 'work', startTime: '08:00', endTime: '16:00', rawText: trimmed, hours: 8 };
   }
   if (upper === 'T' || upper === 'TARDE') {
-    return { type: 'work', startTime: '15:00', endTime: '23:00', rawText: trimmed, hours: 8 };
+    return { type: 'work', startTime: '16:00', endTime: '00:00', rawText: trimmed, hours: 8 };
   }
   if (upper === 'N' || upper === 'NOCHE') {
-    const calc = calculateShiftHours(dateStr, '23:00', '07:00');
-    return { type: 'work', startTime: '23:00', endTime: '07:00', rawText: trimmed, hours: calc.hours, isOvernight: true };
+    return { type: 'work', startTime: '00:00', endTime: '08:00', rawText: trimmed, hours: 8, isOvernight: true };
   }
 
   // Split shift: e.g. "09:00-13:00 / 17:00-21:00" or "09:00-13:00/17:00-21:00"

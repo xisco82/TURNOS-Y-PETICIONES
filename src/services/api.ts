@@ -11,7 +11,12 @@ import {
 } from '../types';
 import { OFFICIAL_ADMIN_USER, normalizeDni } from '../constants/initialEmployees';
 import { OFFICIAL_WEEK_SCHEDULE } from '../constants/officialSchedule';
-import { getEmployeesFromFirestore, saveEmployeeToFirestore } from './firebase';
+import {
+  getEmployeesFromFirestore,
+  saveEmployeeToFirestore,
+  deleteEmployeeFromFirestore,
+  updateEmployeeInFirestore,
+} from './firebase';
 
 const TOKEN_KEY = 'hgranfiesta_auth_token';
 
@@ -506,16 +511,76 @@ export const api = {
   },
 
   async updateUser(id: string, data: Partial<User> & { resetPassword?: boolean }): Promise<User> {
-    return request<User>(`/api/users/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
+    let updatedUser: User | null = null;
+    try {
+      updatedUser = await request<User>(`/api/users/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+    } catch {
+      // Offline / Vercel fallback
+      const cached = await loadStoredOrFirestoreUsers();
+      const existing = cached.find(u => u.id === id);
+      if (existing) {
+        updatedUser = {
+          ...existing,
+          ...data,
+          aliases: data.aliases || existing.aliases,
+          updatedAt: new Date().toISOString(),
+        } as User;
+        if (data.resetPassword) {
+          updatedUser.tempPassword = `temp${Math.floor(1000 + Math.random() * 9000)}`;
+        }
+      }
+    }
+
+    if (!updatedUser) {
+      updatedUser = { id, ...data } as User;
+    }
+
+    // Always sync to Firestore & LocalStorage
+    try {
+      await updateEmployeeInFirestore(id, updatedUser);
+    } catch (err) {
+      console.warn('Could not update in Firestore:', err);
+    }
+    try {
+      const cached = await loadStoredOrFirestoreUsers();
+      const updatedList = cached.map(u => (u.id === id ? { ...u, ...updatedUser } : u));
+      localStorage.setItem('app_database_users', JSON.stringify(updatedList));
+    } catch {}
+
+    return updatedUser;
   },
 
   async deleteUser(id: string, mode: 'deactivate' | 'permanent'): Promise<{ success: boolean }> {
-    return request<{ success: boolean }>(`/api/users/${id}?mode=${mode}`, {
-      method: 'DELETE',
-    });
+    try {
+      await request<{ success: boolean }>(`/api/users/${id}?mode=${mode}`, {
+        method: 'DELETE',
+      });
+    } catch {
+      // Vercel / Offline fallback handled below
+    }
+
+    // Always sync deletion to Firestore & LocalStorage
+    try {
+      await deleteEmployeeFromFirestore(id, mode);
+    } catch (err) {
+      console.warn('Could not delete in Firestore:', err);
+    }
+
+    try {
+      const cached = await loadStoredOrFirestoreUsers();
+      let updatedList: User[];
+      if (mode === 'permanent') {
+        updatedList = cached.filter(u => u.id !== id);
+      } else {
+        updatedList = cached.map(u => (u.id === id ? { ...u, status: 'deactivated' as const } : u));
+      }
+      localStorage.setItem('app_database_users', JSON.stringify(updatedList));
+    } catch {}
+
+    return { success: true };
   },
 
   // Schedules

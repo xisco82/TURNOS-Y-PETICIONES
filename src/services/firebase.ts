@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from 'firebase/firestore';
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import configJson from '../../firebase-applet-config.json';
 
@@ -298,4 +298,27 @@ export async function saveEmployeeToFirestore(user: any): Promise<void> {
     updatedAt: new Date().toISOString(),
   }, { merge: true });
 }
+
+export async function deleteEmployeeFromFirestore(id: string, mode: 'deactivate' | 'permanent'): Promise<void> {
+  if (!id) return;
+  const userRef = doc(db, 'users', id);
+  if (mode === 'permanent') {
+    await deleteDoc(userRef);
+  } else {
+    await setDoc(userRef, {
+      status: 'deactivated',
+      updatedAt: new Date().toISOString(),
+    }, { merge: true });
+  }
+}
+
+export async function updateEmployeeInFirestore(id: string, data: any): Promise<void> {
+  if (!id) return;
+  const userRef = doc(db, 'users', id);
+  await setDoc(userRef, {
+    ...data,
+    updatedAt: new Date().toISOString(),
+  }, { merge: true });
+}
+
 

@@ -28,6 +28,8 @@ export interface ShiftDetail {
   isOvernight?: boolean;
   isSplit?: boolean;
   note?: string;
+  textColor?: string;
+  bgColor?: string;
 }
 
 export type DayShift = ShiftDetail;
@@ -52,6 +54,7 @@ export interface WeekSchedule {
   changeReason?: string;
   rows: EmployeeScheduleRow[];
   rawInputText?: string;
+  colorOverrides?: Record<string, { textColor?: string; bgColor?: string }>;
   createdAt?: string;
   updatedAt?: string;
 }
