@@ -371,6 +371,46 @@
   ],
   "auditLogs": [
     {
+      "id": "log-1792781317500-w1wcp",
+      "timestamp": "2026-10-23T18:48:37.500Z",
+      "userId": "emp-6",
+      "userName": "Josep (Josep Vidal Pérez)",
+      "action": "Test de conexión con la base de datos (Josep)",
+      "entity": "ajustes",
+      "newValue": "test de conexion de josep realizado con exito",
+      "notes": "Latencia: 12ms • Desde: Web Vercel CDN (turnos-y-peticiones.vercel.app)"
+    },
+    {
+      "id": "log-1792781310671-hi9e1",
+      "timestamp": "2026-10-23T18:48:30.671Z",
+      "userId": "emp-2",
+      "userName": "Aliz (Aliz Varga)",
+      "action": "Test de conexión con la base de datos (Aliz)",
+      "entity": "ajustes",
+      "newValue": "test de conexion de aliz realizado con exito",
+      "notes": "Latencia: 12ms • Desde: Web Vercel CDN (turnos-y-peticiones.vercel.app)"
+    },
+    {
+      "id": "log-1792781305769-pb6oc",
+      "timestamp": "2026-10-23T18:48:25.769Z",
+      "userId": "emp-4",
+      "userName": "Javi (Francisco Javier Segundo Moya)",
+      "action": "Test de conexión con la base de datos (Javi)",
+      "entity": "ajustes",
+      "newValue": "test de conexion de javi realizado con exito",
+      "notes": "Latencia: 12ms • Desde: Web Vercel CDN (turnos-y-peticiones.vercel.app)"
+    },
+    {
+      "id": "log-1792781298128-uns9u",
+      "timestamp": "2026-10-23T18:48:18.128Z",
+      "userId": "admin-1",
+      "userName": "Xisco G. H.",
+      "action": "Test de conexión con la base de datos",
+      "entity": "ajustes",
+      "newValue": "test de conexion de xisco realizado con exito",
+      "notes": "Latencia: 12ms • Firestore y Local"
+    },
+    {
       "id": "log-1792780904480-0hv3m",
       "timestamp": "2026-10-23T18:41:44.480Z",
       "userId": "admin-1",

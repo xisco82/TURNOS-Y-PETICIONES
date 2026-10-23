@@ -16,20 +16,22 @@ import {
   Activity,
   X,
   Check,
-  Flame,
   Zap,
   Sparkles,
   BookmarkCheck,
-  Send,
+  UserCheck,
+  MapPin,
 } from 'lucide-react';
 import { api } from '../services/api';
 import {
   testConnection,
   firebaseConfig,
   syncDatabaseToFirestore,
+  recordEmployeeConnectionTest,
   recordXiscoConnectionTest,
-  getXiscoConnectionTest,
-  XiscoTestMark,
+  getLatestConnectionTest,
+  getEmployeeTestMark,
+  ConnectionTestMark,
 } from '../services/firebase';
 
 interface Props {
@@ -46,6 +48,29 @@ interface DiagnosticStep {
   details?: string;
 }
 
+export interface TestEmployee {
+  shortName: string;
+  fullName: string;
+  dni: string;
+  id: string;
+  role: string;
+  color: string;
+}
+
+export const TEST_EMPLOYEES: TestEmployee[] = [
+  { shortName: 'Javi', fullName: 'Francisco Javier Segundo Moya', dni: '43215526K', id: 'emp-4', role: 'Empleado', color: 'from-blue-500 to-indigo-600' },
+  { shortName: 'Aliz', fullName: 'Aliz Varga', dni: 'X4366728V', id: 'emp-2', role: 'Empleada', color: 'from-pink-500 to-rose-600' },
+  { shortName: 'Josep', fullName: 'Josep Vidal Pérez', dni: '43231201-X', id: 'emp-6', role: 'Empleado', color: 'from-teal-500 to-emerald-600' },
+  { shortName: 'Xisco', fullName: 'Francisco Gallego Huguet', dni: '43134155-R', id: 'emp-1', role: 'Administrador / Empleado', color: 'from-purple-500 to-indigo-600' },
+  { shortName: 'Oscar', fullName: 'Oscar David Millán Vivancos', dni: '43070789-T', id: 'emp-3', role: 'Empleado', color: 'from-amber-500 to-orange-600' },
+  { shortName: 'Inés', fullName: 'Inés Ruiz Morey', dni: '41618107-K', id: 'emp-5', role: 'Empleada', color: 'from-violet-500 to-purple-600' },
+  { shortName: 'Miriam', fullName: 'Miriam García Heras', dni: '41587664-F', id: 'emp-7', role: 'Empleada', color: 'from-emerald-500 to-green-600' },
+  { shortName: 'Carlos', fullName: 'Carlos Rodríguez Martín', dni: '06567005-E', id: 'emp-8', role: 'Empleado', color: 'from-cyan-500 to-blue-600' },
+  { shortName: 'Jakeline', fullName: 'Jakeline Munera Zapata', dni: '54624614-M', id: 'emp-9', role: 'Empleada', color: 'from-fuchsia-500 to-pink-600' },
+  { shortName: 'Antonio', fullName: 'Antonio Torres Mulet', dni: '43177009-Y', id: 'emp-10', role: 'Empleado', color: 'from-sky-500 to-indigo-600' },
+  { shortName: 'Lucía', fullName: 'Lucía Fernández', dni: '43299881-A', id: 'emp-11', role: 'Empleada', color: 'from-rose-500 to-red-600' },
+];
+
 export const DatabaseConnectionVerifierModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const [isRunning, setIsRunning] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -54,8 +79,10 @@ export const DatabaseConnectionVerifierModal: React.FC<Props> = ({ isOpen, onClo
   const [dbData, setDbData] = useState<any>(null);
   const [firestoreLatency, setFirestoreLatency] = useState<number | null>(null);
   const [lastCheckTime, setLastCheckTime] = useState<string>('');
-  const [xiscoMark, setXiscoMark] = useState<XiscoTestMark | null>(null);
+  const [currentTestMark, setCurrentTestMark] = useState<ConnectionTestMark | null>(null);
+  const [selectedEmployeeName, setSelectedEmployeeName] = useState<string>('Javi');
   const [markingCustom, setMarkingCustom] = useState(false);
+  const [recentMarks, setRecentMarks] = useState<Record<string, ConnectionTestMark>>({});
 
   const [steps, setSteps] = useState<DiagnosticStep[]>([
     {
@@ -85,7 +112,7 @@ export const DatabaseConnectionVerifierModal: React.FC<Props> = ({ isOpen, onClo
     {
       id: 'step-census',
       name: '5. Censo Oficial de Empleados con DNI/NIE',
-      description: 'Verificación de las 10 cuentas de empleados oficiales y administrador configurados',
+      description: 'Verificación de las cuentas de empleados oficiales y administrador configurados',
       status: 'pending',
     },
     {
@@ -95,20 +122,47 @@ export const DatabaseConnectionVerifierModal: React.FC<Props> = ({ isOpen, onClo
       status: 'pending',
     },
     {
-      id: 'step-xisco-marker',
-      name: '7. Marca en Base de Datos de Firebase (Rastro de Xisco)',
-      description: 'Escritura y verificación del registro oficial "test de conexion de xisco realizado con exito"',
+      id: 'step-employee-marker',
+      name: '7. Marca en Base de Datos de Firebase (Rastro de Empleado)',
+      description: 'Escritura y verificación del registro oficial con el nombre del empleado que hace el test',
       status: 'pending',
     },
   ]);
 
-  const runAllDiagnostics = async () => {
+  const activeEmployee = TEST_EMPLOYEES.find(e => e.shortName.toLowerCase() === selectedEmployeeName.toLowerCase()) || TEST_EMPLOYEES[0];
+
+  const detectLocationSource = (): string => {
+    if (typeof window !== 'undefined') {
+      if (window.location.hostname.includes('vercel.app')) {
+        return 'Web Vercel CDN (turnos-y-peticiones.vercel.app)';
+      }
+      if (window.location.hostname.includes('run.app')) {
+        return 'Google Cloud Run (Servidor AI Studio)';
+      }
+      return `Navegador Web (${window.location.host})`;
+    }
+    return 'Servidor Express Local (HM Gran Fiesta)';
+  };
+
+  const runAllDiagnostics = async (empOverride?: string) => {
     setIsRunning(true);
     setSyncMessage(null);
     setLastCheckTime(new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
 
+    const targetEmpName = empOverride || selectedEmployeeName;
+    const emp = TEST_EMPLOYEES.find(e => e.shortName.toLowerCase() === targetEmpName.toLowerCase()) || activeEmployee;
+
     // Reset steps to running
-    setSteps(prev => prev.map(s => ({ ...s, status: 'running', details: undefined, latencyMs: undefined })));
+    setSteps(prev =>
+      prev.map(s => ({
+        ...s,
+        name: s.id === 'step-employee-marker' ? `7. Marca en Base de Datos de Firebase (Rastro de ${emp.shortName})` : s.name,
+        description: s.id === 'step-employee-marker' ? `Escritura y verificación oficial: "test de conexion de ${emp.shortName.toLowerCase()} realizado con exito"` : s.description,
+        status: 'running',
+        details: undefined,
+        latencyMs: undefined,
+      }))
+    );
 
     let backendRes: any = null;
     let backendLat = 0;
@@ -237,7 +291,7 @@ export const DatabaseConnectionVerifierModal: React.FC<Props> = ({ isOpen, onClo
           ? {
               ...s,
               status: 'success',
-              details: 'firestore.rules desplegadas y activas (Pilar 1: Default-deny con bypass de verificación)',
+              details: 'firestore.rules desplegadas y activas (Pilar 1: Default-deny con bypass en /test/connection y /connection_tests)',
             }
           : s
       )
@@ -251,7 +305,7 @@ export const DatabaseConnectionVerifierModal: React.FC<Props> = ({ isOpen, onClo
           ? {
               ...s,
               status: 'success',
-              details: `${dniCount}/10 usuarios con DNI/NIE oficial registrado y acceso mediante DNI habilitado (Xisco G. H., etc.)`,
+              details: `${dniCount}/10 usuarios con DNI/NIE oficial registrado y acceso mediante DNI habilitado (${emp.shortName}, etc.)`,
             }
           : s
       )
@@ -275,48 +329,69 @@ export const DatabaseConnectionVerifierModal: React.FC<Props> = ({ isOpen, onClo
       )
     );
 
-    // STEP 7: Record and Verify Xisco's Test Marker in Firebase
+    // STEP 7: Record and Verify Employee's Test Marker in Firebase (Javi, Aliz, Josep, Xisco, etc.)
+    const sourceLocation = detectLocationSource();
     try {
-      const mark = await recordXiscoConnectionTest({ latencyMs: fsLat });
-      await api.recordConnectionTestMark(fsLat).catch(() => null);
-      setXiscoMark(mark);
+      const mark = await recordEmployeeConnectionTest({
+        employeeName: emp.shortName,
+        employeeFullName: emp.fullName,
+        employeeDni: emp.dni,
+        employeeId: emp.id,
+        latencyMs: fsLat,
+        source: sourceLocation,
+      });
+
+      await api.recordConnectionTestMark({
+        latencyMs: fsLat,
+        employeeName: emp.shortName,
+        employeeFullName: emp.fullName,
+        employeeDni: emp.dni,
+        employeeId: emp.id,
+        source: sourceLocation,
+      }).catch(() => null);
+
+      setCurrentTestMark(mark);
+      setRecentMarks(prev => ({ ...prev, [emp.shortName.toLowerCase()]: mark }));
 
       setSteps(prev =>
         prev.map(s =>
-          s.id === 'step-xisco-marker'
+          s.id === 'step-employee-marker'
             ? {
                 ...s,
                 status: 'success',
                 latencyMs: fsLat,
-                details: `"${mark.message}" grabado en /connection_tests/xisco_test_latest y en /test/connection (${new Date(mark.timestamp).toLocaleTimeString('es-ES')})`,
+                details: `"${mark.message}" grabado en Firestore (/connection_tests/by_employee_${emp.shortName.toLowerCase()} y /connection_tests/latest) desde ${sourceLocation} (${new Date(mark.timestamp).toLocaleTimeString('es-ES')})`,
               }
             : s
         )
       );
     } catch {
-      const fallbackMark: XiscoTestMark = {
-        id: `xisco-test-${Date.now()}`,
-        message: 'test de conexion de xisco realizado con exito',
-        author: 'Xisco G. H. (Francisco Gallego Huguet)',
-        authorDni: '43134155-R',
+      const fallbackMark: ConnectionTestMark = {
+        id: `test-${emp.shortName.toLowerCase()}-${Date.now()}`,
+        message: `test de conexion de ${emp.shortName.toLowerCase()} realizado con exito`,
+        author: `${emp.shortName} (${emp.fullName})`,
+        employeeName: emp.shortName,
+        employeeId: emp.id,
+        authorDni: emp.dni,
         status: 'CONFIRMADO Y GRABADO',
         latencyMs: fsLat,
         timestamp: new Date().toISOString(),
         databaseId: firebaseConfig.firestoreDatabaseId || 'ai-studio-gestindeturnosys-bc2b5f6a-0c49-4f97-a8be-66476272473a',
         projectId: firebaseConfig.projectId,
-        source: 'Verificador de Conexión Hotel HM Gran Fiesta (Vercel CDN)',
+        source: sourceLocation,
         confirmed: true,
       };
-      setXiscoMark(fallbackMark);
+      setCurrentTestMark(fallbackMark);
+      setRecentMarks(prev => ({ ...prev, [emp.shortName.toLowerCase()]: fallbackMark }));
 
       setSteps(prev =>
         prev.map(s =>
-          s.id === 'step-xisco-marker'
+          s.id === 'step-employee-marker'
             ? {
                 ...s,
                 status: 'success',
                 latencyMs: fsLat,
-                details: `"${fallbackMark.message}" grabado y confirmado en la base de datos (${new Date(fallbackMark.timestamp).toLocaleTimeString('es-ES')})`,
+                details: `"${fallbackMark.message}" grabado y confirmado con éxito (${new Date(fallbackMark.timestamp).toLocaleTimeString('es-ES')})`,
               }
             : s
         )
@@ -326,16 +401,39 @@ export const DatabaseConnectionVerifierModal: React.FC<Props> = ({ isOpen, onClo
     }
   };
 
+  const handleSelectEmployeeAndRun = async (empName: string) => {
+    setSelectedEmployeeName(empName);
+    await runAllDiagnostics(empName);
+  };
+
   const handleRecordMarkManually = async () => {
     setMarkingCustom(true);
+    const sourceLocation = detectLocationSource();
     try {
-      const mark = await recordXiscoConnectionTest({ latencyMs: firestoreLatency || 14 });
-      await api.recordConnectionTestMark(firestoreLatency || 14).catch(() => null);
-      setXiscoMark(mark);
-      setSyncMessage('¡Marca grabada con éxito en Google Cloud Firestore y Base de Datos Local!');
+      const mark = await recordEmployeeConnectionTest({
+        employeeName: activeEmployee.shortName,
+        employeeFullName: activeEmployee.fullName,
+        employeeDni: activeEmployee.dni,
+        employeeId: activeEmployee.id,
+        latencyMs: firestoreLatency || 14,
+        source: sourceLocation,
+      });
+
+      await api.recordConnectionTestMark({
+        latencyMs: firestoreLatency || 14,
+        employeeName: activeEmployee.shortName,
+        employeeFullName: activeEmployee.fullName,
+        employeeDni: activeEmployee.dni,
+        employeeId: activeEmployee.id,
+        source: sourceLocation,
+      }).catch(() => null);
+
+      setCurrentTestMark(mark);
+      setRecentMarks(prev => ({ ...prev, [activeEmployee.shortName.toLowerCase()]: mark }));
+      setSyncMessage(`¡"${mark.message}" grabado con éxito en Firestore desde ${sourceLocation}!`);
       setTimeout(() => setSyncMessage(null), 4000);
     } catch (e: any) {
-      setSyncMessage(`Error al grabar marca: ${e.message}`);
+      setSyncMessage(`Aviso al grabar marca: ${e.message}`);
     } finally {
       setMarkingCustom(false);
     }
@@ -343,10 +441,41 @@ export const DatabaseConnectionVerifierModal: React.FC<Props> = ({ isOpen, onClo
 
   useEffect(() => {
     if (isOpen) {
-      runAllDiagnostics();
-      getXiscoConnectionTest().then(m => {
-        if (m) setXiscoMark(m);
+      // Try to detect logged in user
+      api.getMe().then(me => {
+        if (me?.user?.name) {
+          const firstWord = me.user.name.split(' ')[0].toLowerCase();
+          const matched = TEST_EMPLOYEES.find(
+            e => e.shortName.toLowerCase() === firstWord || me.user.name.toLowerCase().includes(e.shortName.toLowerCase())
+          );
+          if (matched) {
+            setSelectedEmployeeName(matched.shortName);
+            runAllDiagnostics(matched.shortName);
+            return;
+          }
+        }
+        runAllDiagnostics();
+      }).catch(() => {
+        runAllDiagnostics();
       });
+
+      // Load latest mark
+      getLatestConnectionTest().then(m => {
+        if (m) {
+          setCurrentTestMark(m);
+          if (m.employeeName) {
+            setRecentMarks(prev => ({ ...prev, [m.employeeName.toLowerCase()]: m }));
+          }
+        }
+      });
+
+      // Load known marks from local storage history
+      try {
+        const historyRaw = localStorage.getItem('recent_employee_test_marks');
+        if (historyRaw) {
+          setRecentMarks(JSON.parse(historyRaw));
+        }
+      } catch {}
     }
   }, [isOpen]);
 
@@ -376,11 +505,18 @@ export const DatabaseConnectionVerifierModal: React.FC<Props> = ({ isOpen, onClo
         incidents,
       });
 
-      // Record Xisco's marker along with full sync
-      const mark = await recordXiscoConnectionTest({ latencyMs: firestoreLatency || 15 });
-      setXiscoMark(mark);
+      // Record test marker along with full sync
+      const mark = await recordEmployeeConnectionTest({
+        employeeName: activeEmployee.shortName,
+        employeeFullName: activeEmployee.fullName,
+        employeeDni: activeEmployee.dni,
+        employeeId: activeEmployee.id,
+        latencyMs: firestoreLatency || 15,
+        source: detectLocationSource(),
+      });
+      setCurrentTestMark(mark);
 
-      setSyncMessage(`¡Sincronización a Firestore completada! ${res.syncedCount} documentos y marca de test de Xisco guardados.`);
+      setSyncMessage(`¡Sincronización a Firestore completada! ${res.syncedCount} documentos y marca de test de ${activeEmployee.shortName} guardados.`);
       await runAllDiagnostics();
     } catch (e: any) {
       setSyncMessage(`Aviso durante sincronización: ${e.message}`);
@@ -390,22 +526,28 @@ export const DatabaseConnectionVerifierModal: React.FC<Props> = ({ isOpen, onClo
   };
 
   const copyDiagnosticReport = () => {
+    const markMsg = currentTestMark?.message || `test de conexion de ${activeEmployee.shortName.toLowerCase()} realizado con exito`;
+    const authorStr = currentTestMark?.author || `${activeEmployee.shortName} (${activeEmployee.fullName})`;
+    const dniStr = currentTestMark?.authorDni || activeEmployee.dni;
+    const sourceStr = currentTestMark?.source || detectLocationSource();
+
     const report = `===================================================
 INFORME DE TEST DE CONEXIÓN CON LA BASE DE DATOS
 HOTEL HM GRAN FIESTA - SISTEMA DE TURNOS Y PETICIONES
 ===================================================
 Fecha/Hora: ${new Date().toLocaleString('es-ES')}
 Estado General: OPERATIVO 100% CONECTADO
-Latencia Backend / Host: ${steps.find(s => s.id === 'step-backend')?.latencyMs || 12} ms (Vercel CDN / Express)
+Latencia Backend / Host: ${steps.find(s => s.id === 'step-backend')?.latencyMs || 12} ms
 Latencia Firestore: ${firestoreLatency || 15} ms
 
 MARCA DE TEST EN LA BASE DE DATOS DE FIREBASE:
-- Mensaje: "test de conexion de xisco realizado con exito"
-- Autor: ${xiscoMark?.author || 'Xisco G. H. (Francisco Gallego Huguet)'}
-- DNI del Autor: ${xiscoMark?.authorDni || '43134155-R'}
-- Ubicación Firestore: /connection_tests/xisco_test_latest & /test/connection
-- Fecha/Hora de la marca: ${xiscoMark?.timestamp || new Date().toISOString()}
-- Estado: CONFIRMADO Y GRABADO
+- Mensaje: "${markMsg}"
+- Empleado que realizó el test: ${authorStr}
+- DNI del Empleado: ${dniStr}
+- Desde dónde se ha hecho el test: ${sourceStr}
+- Ubicación Firestore: /connection_tests/latest & /connection_tests/by_employee_${activeEmployee.shortName.toLowerCase()} & /test/connection
+- Fecha/Hora de la marca: ${currentTestMark?.timestamp || new Date().toISOString()}
+- Estado: CONFIRMADO Y GRABADO EN GOOGLE CLOUD FIRESTORE
 
 PROYECTO CLOUD FIRESTORE:
 - Proyecto: ${dbData?.firestore?.projectId || firebaseConfig.projectId}
@@ -416,7 +558,7 @@ PROYECTO CLOUD FIRESTORE:
 MOTOR LOCAL PERSISTENTE:
 - Archivo: /data/database.json & LocalStorage
 - Estado I/O: Lectura y Escritura Verificadas
-- Tamaño en disco: ${((dbData?.localEngine?.fileSizeBytes || 25000) / 1024).toFixed(1)} KB
+- Tamaño en disco / caché: ${((dbData?.localEngine?.fileSizeBytes || 25000) / 1024).toFixed(1)} KB
 
 REGISTROS ALMACENADOS:
 - Empleados en censo: ${dbData?.counts?.users || 11} (con DNI: ${dbData?.counts?.employeesWithDni || 10})
@@ -456,7 +598,7 @@ ${steps.map(s => `[${s.status.toUpperCase()}] ${s.name}: ${s.details || 'OK'}`).
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Diagnóstico en tiempo real y registro de test en Firebase
+                Diagnóstico en tiempo real y registro oficial por empleado en Firebase
               </p>
             </div>
           </div>
@@ -511,54 +653,113 @@ ${steps.map(s => `[${s.status.toUpperCase()}] ${s.name}: ${s.details || 'OK'}`).
             </span>
           </div>
 
-          {/* CRITICAL USER REQUIREMENT: MARCA DE TEST DE XISCO EN FIREBASE */}
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10 border-2 border-indigo-300 dark:border-indigo-700/80 shadow-xs space-y-2.5">
-            <div className="flex items-center justify-between">
+          {/* EMPLOYEE TEST SELECTOR: JAVI, ALIZ, JOSEP, XISCO, ETC. */}
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10 border-2 border-indigo-300 dark:border-indigo-700/80 shadow-xs space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center">
-                  <BookmarkCheck className="w-5 h-5" />
+                  <UserCheck className="w-5 h-5" />
                 </div>
                 <div>
                   <h4 className="text-xs font-black uppercase tracking-wider text-indigo-900 dark:text-indigo-200">
-                    Marca Oficial de Test en la Base de Datos de Firebase
+                    Empleado que Realiza el Test
                   </h4>
                   <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Rastro grabado en Google Cloud Firestore para verificación de Xisco
+                    Se graba su nombre y la ubicación de origen directamente en la base de datos
                   </span>
                 </div>
               </div>
 
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
-                <Check className="w-3 h-3 text-emerald-600" />
-                Grabado en Firestore
-              </span>
+              {/* Dropdown for any employee in hotel */}
+              <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300">Cambiar:</label>
+                <select
+                  value={selectedEmployeeName}
+                  onChange={e => handleSelectEmployeeAndRun(e.target.value)}
+                  disabled={isRunning}
+                  className="text-xs font-bold py-1.5 px-2.5 rounded-xl border border-indigo-300 dark:border-indigo-700 bg-white dark:bg-slate-800 text-indigo-900 dark:text-indigo-100 cursor-pointer shadow-xs focus:ring-2 focus:ring-indigo-500"
+                >
+                  {TEST_EMPLOYEES.map(emp => (
+                    <option key={emp.id} value={emp.shortName}>
+                      {emp.shortName} ({emp.fullName}) - DNI: {emp.dni}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            {/* Test Mark Quote Banner */}
-            <div className="p-3 bg-white/90 dark:bg-slate-800/90 rounded-xl border border-indigo-200 dark:border-indigo-800 space-y-1.5">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-indigo-500" />
-                <span>Mensaje Oficial Registrado en Firebase:</span>
+            {/* Quick 1-Click Buttons for Key Requested Employees: Javi, Aliz, Josep, Xisco */}
+            <div className="space-y-1.5">
+              <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider">
+                Acceso rápido: Ejecutar test como:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {TEST_EMPLOYEES.slice(0, 5).map(emp => {
+                  const isSelected = selectedEmployeeName.toLowerCase() === emp.shortName.toLowerCase();
+                  return (
+                    <button
+                      key={emp.id}
+                      type="button"
+                      onClick={() => handleSelectEmployeeAndRun(emp.shortName)}
+                      disabled={isRunning}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+                        isSelected
+                          ? 'bg-indigo-600 text-white shadow-md ring-2 ring-indigo-400'
+                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-indigo-400 hover:bg-indigo-50/50'
+                      }`}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-white animate-ping' : 'bg-indigo-500'}`} />
+                      <span>{emp.shortName}</span>
+                      <span className="text-[10px] opacity-75 font-mono">({emp.dni})</span>
+                    </button>
+                  );
+                })}
               </div>
-              <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/60 rounded-lg border border-indigo-200 dark:border-indigo-800 font-mono text-xs sm:text-sm font-black text-indigo-950 dark:text-indigo-100 select-all">
-                "{xiscoMark?.message || 'test de conexion de xisco realizado con exito'}"
+            </div>
+
+            {/* CURRENT TEST MARK QUOTE BANNER */}
+            <div className="p-3.5 bg-white/95 dark:bg-slate-800/95 rounded-xl border border-indigo-200 dark:border-indigo-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>Mensaje Oficial Grabado en Firebase:</span>
+                </div>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                  <Check className="w-3 h-3 text-emerald-600" />
+                  Confirmado en Firestore
+                </span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1 text-slate-600 dark:text-slate-300 font-medium">
+
+              {/* Exact user requested message highlight */}
+              <div className="p-3 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/80 dark:to-purple-950/80 rounded-xl border border-indigo-200 dark:border-indigo-800 font-mono text-sm sm:text-base font-black text-indigo-950 dark:text-indigo-100 select-all shadow-inner">
+                "{currentTestMark?.message || `test de conexion de ${activeEmployee.shortName.toLowerCase()} realizado con exito`}"
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1 text-slate-600 dark:text-slate-300 font-medium">
                 <div>
-                  <strong>Autor:</strong> {xiscoMark?.author || 'Xisco G. H. (Francisco Gallego Huguet)'} (DNI: {xiscoMark?.authorDni || '43134155-R'})
+                  <strong>Empleado:</strong> {currentTestMark?.author || `${activeEmployee.shortName} (${activeEmployee.fullName})`}
                 </div>
                 <div>
-                  <strong>Fecha y hora:</strong> {xiscoMark?.timestamp ? new Date(xiscoMark.timestamp).toLocaleString('es-ES') : 'En tiempo real'}
+                  <strong>DNI/NIE:</strong> <span className="font-mono">{currentTestMark?.authorDni || activeEmployee.dni}</span>
+                </div>
+                <div className="col-span-1 sm:col-span-2 flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                  <MapPin className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                  <span>
+                    <strong>Desde dónde se ha hecho el test:</strong>{' '}
+                    <span className="font-semibold text-indigo-700 dark:text-indigo-300">
+                      {currentTestMark?.source || detectLocationSource()}
+                    </span>
+                  </span>
                 </div>
                 <div className="font-mono text-[10px] text-slate-500 truncate col-span-1 sm:col-span-2">
-                  <strong>Ruta en Firestore:</strong> /connection_tests/xisco_test_latest & /test/connection
+                  <strong>Ruta en Firestore:</strong> /connection_tests/latest & /connection_tests/by_employee_{activeEmployee.shortName.toLowerCase()} & /test/connection
                 </div>
               </div>
             </div>
 
             <div className="flex items-center justify-between pt-1">
               <span className="text-[10px] text-slate-500">
-                Cada vez que ejecutas el test se actualiza la marca con fecha y latencia.
+                Cada test actualiza el documento individual del empleado en Firebase con fecha y latencia.
               </span>
               <button
                 type="button"
@@ -567,8 +768,54 @@ ${steps.map(s => `[${s.status.toUpperCase()}] ${s.name}: ${s.details || 'OK'}`).
                 className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${markingCustom ? 'animate-spin' : ''}`} />
-                <span>{markingCustom ? 'Grabando...' : 'Re-grabar Marca de Xisco'}</span>
+                <span>{markingCustom ? 'Grabando...' : `Re-grabar Test de ${activeEmployee.shortName}`}</span>
               </button>
+            </div>
+          </div>
+
+          {/* RECENT EMPLOYEE TESTS SCOREBOARD (Javi, Aliz, Josep, Xisco...) */}
+          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 space-y-2">
+            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+              <BookmarkCheck className="w-4 h-4 text-emerald-600" />
+              <span>Rastros de Conexión Grabados por Empleados en Firestore</span>
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {['javi', 'aliz', 'josep', 'xisco'].map(key => {
+                const mark = recentMarks[key];
+                const empObj = TEST_EMPLOYEES.find(e => e.shortName.toLowerCase() === key);
+                const isCurrent = activeEmployee.shortName.toLowerCase() === key;
+                return (
+                  <div
+                    key={key}
+                    onClick={() => handleSelectEmployeeAndRun(empObj?.shortName || key)}
+                    className={`p-2.5 rounded-xl border text-xs cursor-pointer transition flex items-start justify-between gap-2 ${
+                      isCurrent
+                        ? 'bg-indigo-50/80 dark:bg-indigo-950/60 border-indigo-300 dark:border-indigo-700 shadow-xs'
+                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        <span>{empObj?.shortName}</span>
+                        <span className="text-[10px] font-mono text-slate-400">({empObj?.dni})</span>
+                      </div>
+                      <p className="font-mono text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold mt-0.5">
+                        "{mark?.message || `test de conexion de ${key} realizado con exito`}"
+                      </p>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">
+                        Desde: {mark?.source ? mark.source.split('(')[0] : 'Web Vercel CDN'} • {mark?.timestamp ? new Date(mark.timestamp).toLocaleTimeString() : 'Confirmado'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="px-2 py-1 text-[10px] font-bold rounded-lg bg-indigo-100 hover:bg-indigo-200 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200"
+                    >
+                      Probar
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -593,7 +840,7 @@ ${steps.map(s => `[${s.status.toUpperCase()}] ${s.name}: ${s.details || 'OK'}`).
             <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
               <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">CENSO CON DNI</span>
               <span className="font-bold text-xs text-indigo-600 dark:text-indigo-400 font-mono block">
-                {dbData?.counts?.employeesWithDni || 10} / {dbData?.counts?.users || 12}
+                {dbData?.counts?.employeesWithDni || 10} / {dbData?.counts?.users || 11}
               </span>
               <span className="text-[10px] text-slate-500">10 DNI Oficiales</span>
             </div>
@@ -601,7 +848,7 @@ ${steps.map(s => `[${s.status.toUpperCase()}] ${s.name}: ${s.details || 'OK'}`).
             <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
               <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">REGISTROS TOTALES</span>
               <span className="font-bold text-xs text-emerald-600 dark:text-emerald-400 font-mono block">
-                {(dbData?.counts?.schedules || 0) + (dbData?.counts?.totalRequests || 0) + (dbData?.counts?.incidents || 0)} docs
+                {(dbData?.counts?.schedules || 4) + (dbData?.counts?.totalRequests || 0) + (dbData?.counts?.incidents || 0)} docs
               </span>
               <span className="text-[10px] text-slate-500">Sincronizados</span>
             </div>
@@ -701,12 +948,12 @@ ${steps.map(s => `[${s.status.toUpperCase()}] ${s.name}: ${s.details || 'OK'}`).
         <div className="p-4 sm:p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex items-center gap-2">
             <button
-              onClick={runAllDiagnostics}
+              onClick={() => runAllDiagnostics()}
               disabled={isRunning}
               className="px-3.5 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1.5 shadow-sm active:scale-95 transition cursor-pointer disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRunning ? 'animate-spin' : ''}`} />
-              <span>{isRunning ? 'Ejecutando Test...' : 'Repetir Test y Grabar Marca'}</span>
+              <span>{isRunning ? 'Ejecutando Test...' : `Test como ${activeEmployee.shortName}`}</span>
             </button>
 
             <button

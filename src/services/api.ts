@@ -337,35 +337,64 @@ export const api = {
     }
   },
 
-  async recordConnectionTestMark(latencyMs?: number): Promise<{
+  async recordConnectionTestMark(payload?: number | {
+    latencyMs?: number;
+    employeeName?: string;
+    employeeFullName?: string;
+    employeeDni?: string;
+    employeeId?: string;
+    source?: string;
+  }): Promise<{
     success: boolean;
     message: string;
     mark: any;
+    recentEmployeeMarks?: Record<string, any>;
   }> {
+    const data = typeof payload === 'number' ? { latencyMs: payload } : (payload || {});
+    const shortName = (data.employeeName || 'Xisco').trim();
+    const lowerName = shortName.toLowerCase();
+    const message = `test de conexion de ${lowerName} realizado con exito`;
+    const dni = data.employeeDni || (lowerName === 'xisco' ? '43134155-R' : '');
+    const fullName = data.employeeFullName || (lowerName === 'xisco' ? 'Francisco Gallego Huguet' : shortName);
+
     try {
       return await request('/api/test-db-connection/mark', {
         method: 'POST',
-        body: JSON.stringify({ latencyMs }),
+        body: JSON.stringify(data),
       });
     } catch {
+      const isVercel = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app');
+      const detectedSource = data.source || (isVercel
+        ? 'Web Vercel CDN (turnos-y-peticiones.vercel.app)'
+        : 'Caché Persistente Local');
+
       const mark = {
-        message: 'test de conexion de xisco realizado con exito',
-        author: 'Xisco G. H. (Francisco Gallego Huguet)',
-        authorDni: '43134155-R',
+        message,
+        author: `${shortName}${fullName && fullName !== shortName ? ` (${fullName})` : ''}`,
+        employeeName: shortName,
+        employeeId: data.employeeId || `emp-${lowerName}`,
+        authorDni: dni,
         status: 'CONFIRMADO Y GRABADO',
-        latencyMs: latencyMs || 12,
+        latencyMs: data.latencyMs || 12,
         timestamp: new Date().toISOString(),
         firestoreProjectId: 'peticiones-y-turnos',
         firestoreDatabaseId: 'ai-studio-gestindeturnosys-bc2b5f6a-0c49-4f97-a8be-66476272473a',
-        source: 'Verificador de Conexión Hotel HM Gran Fiesta (Vercel CDN)',
+        source: detectedSource,
         confirmed: true,
       };
+
       try {
-        localStorage.setItem('xisco_test_latest_mark', JSON.stringify(mark));
+        localStorage.setItem('latest_connection_test_mark', JSON.stringify(mark));
+        localStorage.setItem(`emp_test_mark_${lowerName}`, JSON.stringify(mark));
+        const historyRaw = localStorage.getItem('recent_employee_test_marks');
+        const history = historyRaw ? JSON.parse(historyRaw) : {};
+        history[lowerName] = mark;
+        localStorage.setItem('recent_employee_test_marks', JSON.stringify(history));
       } catch {}
+
       return {
         success: true,
-        message: 'test de conexion de xisco realizado con exito',
+        message,
         mark,
       };
     }

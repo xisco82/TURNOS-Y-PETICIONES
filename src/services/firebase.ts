@@ -22,10 +22,12 @@ export async function logoutFirebase(): Promise<void> {
   await signOut(auth);
 }
 
-export interface XiscoTestMark {
+export interface ConnectionTestMark {
   id: string;
   message: string;
   author: string;
+  employeeName: string;
+  employeeId: string;
   authorDni: string;
   status: string;
   latencyMs: number;
@@ -36,49 +38,149 @@ export interface XiscoTestMark {
   confirmed: boolean;
 }
 
-export async function recordXiscoConnectionTest(details?: { latencyMs?: number; notes?: string }): Promise<XiscoTestMark> {
-  const mark: XiscoTestMark = {
-    id: `xisco-test-${Date.now()}`,
-    message: 'test de conexion de xisco realizado con exito',
-    author: 'Xisco G. H. (Francisco Gallego Huguet)',
-    authorDni: '43134155-R',
+export type XiscoTestMark = ConnectionTestMark;
+
+export interface RecordTestOptions {
+  employeeName?: string;
+  employeeFullName?: string;
+  employeeDni?: string;
+  employeeId?: string;
+  latencyMs?: number;
+  source?: string;
+  notes?: string;
+}
+
+export async function recordEmployeeConnectionTest(options?: RecordTestOptions): Promise<ConnectionTestMark> {
+  const shortName = (options?.employeeName || 'Xisco').trim();
+  const lowerName = shortName.toLowerCase();
+  const fullName = options?.employeeFullName || (shortName.toLowerCase() === 'xisco' ? 'Francisco Gallego Huguet' : shortName);
+  const dni = options?.employeeDni || (shortName.toLowerCase() === 'xisco' ? '43134155-R' : '');
+  const empId = options?.employeeId || `emp-${lowerName}`;
+
+  // Exact phrase requested by user:
+  // "test de conexion de javi realizado con exito"
+  // "test de conexion de aliz realizado con exito"
+  // "test de conexion de josep realizado con exito"
+  const message = `test de conexion de ${lowerName} realizado con exito`;
+
+  // Detect location / environment
+  const isVercel = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app');
+  const detectedSource = options?.source || (isVercel
+    ? 'Web Vercel CDN (turnos-y-peticiones.vercel.app)'
+    : typeof window !== 'undefined'
+    ? `Navegador Web (${window.location.host})`
+    : 'Servidor Express Local');
+
+  const mark: ConnectionTestMark = {
+    id: `test-${lowerName}-${Date.now()}`,
+    message,
+    author: `${shortName}${fullName && fullName !== shortName ? ` (${fullName})` : ''}`,
+    employeeName: shortName,
+    employeeId: empId,
+    authorDni: dni,
     status: 'EXITOSO / CONECTADO',
-    latencyMs: details?.latencyMs || 12,
+    latencyMs: options?.latencyMs || 12,
     timestamp: new Date().toISOString(),
     databaseId: firebaseConfig.firestoreDatabaseId || 'ai-studio-gestindeturnosys-bc2b5f6a-0c49-4f97-a8be-66476272473a',
     projectId: firebaseConfig.projectId,
-    source: 'Verificador de Conexión Hotel HM Gran Fiesta',
+    source: detectedSource,
     confirmed: true,
   };
 
   try {
-    // 1. Write to /test/connection
+    // 1. Write to /test/connection (general live test doc)
     await setDoc(doc(db, 'test', 'connection'), mark, { merge: true });
 
-    // 2. Write to /connection_tests/xisco_test_latest
-    await setDoc(doc(db, 'connection_tests', 'xisco_test_latest'), mark, { merge: true });
+    // 2. Write to /connection_tests/latest
+    await setDoc(doc(db, 'connection_tests', 'latest'), mark, { merge: true });
 
-    // 3. Write historical record to /connection_tests/{mark.id}
+    // 3. Write persistent per-employee test document (Javi, Aliz, Josep, Xisco, etc.)
+    await setDoc(doc(db, 'connection_tests', `by_employee_${lowerName}`), mark, { merge: true });
+
+    // 4. Backwards compatibility for xisco_test_latest
+    if (lowerName === 'xisco' || lowerName.includes('francisco')) {
+      await setDoc(doc(db, 'connection_tests', 'xisco_test_latest'), mark, { merge: true });
+    }
+
+    // 5. Historical log record
     await setDoc(doc(db, 'connection_tests', mark.id), mark);
   } catch (err: any) {
-    console.warn('Notice recording Xisco test mark to Firestore:', err.message);
+    console.warn('Notice recording connection test mark to Firestore:', err.message);
+  }
+
+  // Also save in localStorage for instant access & offline resiliency
+  if (typeof localStorage !== 'undefined') {
+    try {
+      localStorage.setItem('latest_connection_test_mark', JSON.stringify(mark));
+      localStorage.setItem(`emp_test_mark_${lowerName}`, JSON.stringify(mark));
+      const historyRaw = localStorage.getItem('recent_employee_test_marks');
+      const history = historyRaw ? JSON.parse(historyRaw) : {};
+      history[lowerName] = mark;
+      localStorage.setItem('recent_employee_test_marks', JSON.stringify(history));
+    } catch {}
   }
 
   return mark;
 }
 
-export async function getXiscoConnectionTest(): Promise<XiscoTestMark | null> {
+export async function recordXiscoConnectionTest(details?: { latencyMs?: number; notes?: string }): Promise<ConnectionTestMark> {
+  return recordEmployeeConnectionTest({
+    employeeName: 'Xisco',
+    employeeFullName: 'Francisco Gallego Huguet',
+    employeeDni: '43134155-R',
+    employeeId: 'emp-1',
+    latencyMs: details?.latencyMs,
+    notes: details?.notes,
+  });
+}
+
+export async function getLatestConnectionTest(): Promise<ConnectionTestMark | null> {
   try {
-    const snap = await getDoc(doc(db, 'connection_tests', 'xisco_test_latest'));
+    const snap = await getDoc(doc(db, 'connection_tests', 'latest'));
     if (snap.exists()) {
-      return snap.data() as XiscoTestMark;
+      return snap.data() as ConnectionTestMark;
+    }
+    const snapXisco = await getDoc(doc(db, 'connection_tests', 'xisco_test_latest'));
+    if (snapXisco.exists()) {
+      return snapXisco.data() as ConnectionTestMark;
     }
     const testDoc = await getDoc(doc(db, 'test', 'connection'));
     if (testDoc.exists() && testDoc.data()?.message) {
-      return testDoc.data() as XiscoTestMark;
+      return testDoc.data() as ConnectionTestMark;
     }
   } catch (err) {
-    console.warn('Notice getting Xisco test mark:', err);
+    console.warn('Notice getting latest test mark:', err);
+  }
+
+  if (typeof localStorage !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('latest_connection_test_mark');
+      if (stored) return JSON.parse(stored);
+    } catch {}
+  }
+  return null;
+}
+
+export async function getXiscoConnectionTest(): Promise<ConnectionTestMark | null> {
+  return getLatestConnectionTest();
+}
+
+export async function getEmployeeTestMark(employeeName: string): Promise<ConnectionTestMark | null> {
+  const lowerName = employeeName.trim().toLowerCase();
+  try {
+    const snap = await getDoc(doc(db, 'connection_tests', `by_employee_${lowerName}`));
+    if (snap.exists()) {
+      return snap.data() as ConnectionTestMark;
+    }
+  } catch (e) {
+    console.warn(`Notice getting test mark for ${employeeName}:`, e);
+  }
+
+  if (typeof localStorage !== 'undefined') {
+    try {
+      const stored = localStorage.getItem(`emp_test_mark_${lowerName}`);
+      if (stored) return JSON.parse(stored);
+    } catch {}
   }
   return null;
 }

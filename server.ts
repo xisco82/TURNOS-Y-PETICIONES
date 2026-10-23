@@ -824,58 +824,76 @@ app.get('/api/test-db-connection', async (_req, res) => {
   });
 });
 
-// Store latest connection test marker
-let latestTestMark = {
-  message: 'test de conexion de xisco realizado con exito',
-  author: 'Xisco G. H. (Francisco Gallego Huguet)',
-  authorDni: '43134155-R',
-  status: 'EXITOSO / CONECTADO',
-  latencyMs: 15,
-  timestamp: new Date().toISOString(),
-  firestoreProjectId: 'peticiones-y-turnos',
-  firestoreDatabaseId: 'ai-studio-gestindeturnosys-bc2b5f6a-0c49-4f97-a8be-66476272473a',
-  source: 'Verificador de Conexión Hotel HM Gran Fiesta',
-  confirmed: true,
-};
-
-app.get('/api/test-db-connection/mark', (_req, res) => {
-  res.json({
-    success: true,
-    mark: latestTestMark,
-  });
-});
-
-app.post('/api/test-db-connection/mark', (req, res) => {
-  const { latencyMs, author } = req.body || {};
-  latestTestMark = {
+// Store latest connection test marker and per-employee records
+let recentEmployeeMarks: Record<string, any> = {
+  xisco: {
     message: 'test de conexion de xisco realizado con exito',
-    author: author || 'Xisco G. H. (Francisco Gallego Huguet)',
+    author: 'Xisco (Francisco Gallego Huguet)',
+    employeeName: 'Xisco',
     authorDni: '43134155-R',
     status: 'EXITOSO / CONECTADO',
-    latencyMs: typeof latencyMs === 'number' ? latencyMs : 12,
+    latencyMs: 12,
     timestamp: new Date().toISOString(),
     firestoreProjectId: 'peticiones-y-turnos',
     firestoreDatabaseId: 'ai-studio-gestindeturnosys-bc2b5f6a-0c49-4f97-a8be-66476272473a',
     source: 'Verificador de Conexión Hotel HM Gran Fiesta',
     confirmed: true,
+  },
+};
+
+let latestTestMark = recentEmployeeMarks.xisco;
+
+app.get('/api/test-db-connection/mark', (_req, res) => {
+  res.json({
+    success: true,
+    mark: latestTestMark,
+    recentEmployeeMarks,
+  });
+});
+
+app.post('/api/test-db-connection/mark', (req, res) => {
+  const { latencyMs, author, employeeName, employeeFullName, employeeDni, employeeId, source } = req.body || {};
+  const shortName = (employeeName || author || 'Xisco').trim();
+  const lowerName = shortName.toLowerCase();
+  const message = `test de conexion de ${lowerName} realizado con exito`;
+  const dni = employeeDni || (lowerName === 'xisco' ? '43134155-R' : '');
+  const fullName = employeeFullName || (lowerName === 'xisco' ? 'Francisco Gallego Huguet' : shortName);
+
+  const mark = {
+    message,
+    author: `${shortName}${fullName && fullName !== shortName ? ` (${fullName})` : ''}`,
+    employeeName: shortName,
+    employeeId: employeeId || `emp-${lowerName}`,
+    authorDni: dni,
+    status: 'EXITOSO / CONECTADO',
+    latencyMs: typeof latencyMs === 'number' ? latencyMs : 12,
+    timestamp: new Date().toISOString(),
+    firestoreProjectId: 'peticiones-y-turnos',
+    firestoreDatabaseId: 'ai-studio-gestindeturnosys-bc2b5f6a-0c49-4f97-a8be-66476272473a',
+    source: source || 'Verificador de Conexión Hotel HM Gran Fiesta',
+    confirmed: true,
   };
 
+  latestTestMark = mark;
+  recentEmployeeMarks[lowerName] = mark;
+
   addAuditLog(
-    'admin-1',
-    'Xisco G. H.',
-    'Test de conexión con la base de datos',
+    employeeId || 'admin-1',
+    mark.author,
+    `Test de conexión con la base de datos (${shortName})`,
     'ajustes',
     undefined,
-    'test de conexion de xisco realizado con exito',
-    `Latencia: ${latestTestMark.latencyMs}ms • Firestore y Local`
+    message,
+    `Latencia: ${mark.latencyMs}ms • Desde: ${mark.source}`
   );
 
   saveDatabase();
 
   res.json({
     success: true,
-    message: 'test de conexion de xisco realizado con exito',
-    mark: latestTestMark,
+    message,
+    mark,
+    recentEmployeeMarks,
   });
 });
 
