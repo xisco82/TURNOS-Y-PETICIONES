@@ -7,11 +7,13 @@
       "properties": {
         "id": { "type": "string", "maxLength": 128 },
         "name": { "type": "string", "maxLength": 150 },
+        "dni": { "type": "string", "maxLength": 30 },
         "aliases": { "type": "array" },
         "email": { "type": "string", "maxLength": 200 },
         "phone": { "type": "string", "maxLength": 50 },
         "role": { "type": "string", "enum": ["admin", "employee"] },
         "status": { "type": "string", "enum": ["active", "deactivated", "deleted"] },
+        "registeredAt": { "type": "string", "maxLength": 100 },
         "createdAt": { "type": "string", "maxLength": 100 }
       },
       "required": ["id", "name", "role", "status"]

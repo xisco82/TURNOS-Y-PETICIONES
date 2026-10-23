@@ -34,6 +34,7 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
   // Form state
   const [formData, setFormData] = useState({
     name: '',
+    dni: '',
     aliases: '',
     email: '',
     phone: '',
@@ -57,6 +58,7 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
     try {
       const created = await api.createUser({
         name: formData.name.trim(),
+        dni: formData.dni.trim() || undefined,
         aliases: formData.aliases ? formData.aliases.split(',').map(s => s.trim()).filter(Boolean) : [],
         email: formData.email.trim() || undefined,
         phone: formData.phone.trim() || undefined,
@@ -64,7 +66,7 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
 
       setNewPasswordCreated({ name: created.name, pass: created.tempPassword || 'emp1234' });
       setShowAddModal(false);
-      setFormData({ name: '', aliases: '', email: '', phone: '' });
+      setFormData({ name: '', dni: '', aliases: '', email: '', phone: '' });
       onRefresh();
     } catch (err: any) {
       setErrorNotification(err.message || 'Error al añadir empleado');
@@ -78,6 +80,7 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
     try {
       await api.updateUser(editingUser.id, {
         name: editingUser.name,
+        dni: editingUser.dni,
         aliases: editingUser.aliases,
         email: editingUser.email,
         phone: editingUser.phone,
@@ -219,15 +222,31 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
                       </span>
                     )}
                   </div>
-                  <span
-                    className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1 ${
-                      emp.status === 'active'
-                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60'
-                        : 'bg-slate-200 text-slate-600 dark:bg-slate-800'
-                    }`}
-                  >
-                    {emp.status === 'active' ? 'Cuenta Activa' : 'Desactivada'}
-                  </span>
+                  <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                    <span
+                      className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        emp.status === 'active'
+                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60'
+                          : 'bg-slate-200 text-slate-600 dark:bg-slate-800'
+                      }`}
+                    >
+                      {emp.status === 'active' ? 'Cuenta Activa' : 'Desactivada'}
+                    </span>
+                    {emp.dni && (
+                      <span className="inline-block text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
+                        DNI: {emp.dni}
+                      </span>
+                    )}
+                    {emp.registeredAt ? (
+                      <span className="inline-block text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                        ✓ Alta completada
+                      </span>
+                    ) : (
+                      <span className="inline-block text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                        Pendiente de alta
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Edit & Delete Buttons */}
@@ -353,6 +372,20 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
               </div>
 
               <div>
+                <label className="block font-semibold mb-1">DNI / NIE *</label>
+                <input
+                  type="text"
+                  value={formData.dni}
+                  onChange={e => setFormData({ ...formData, dni: e.target.value })}
+                  placeholder="Ej: 43134155-R"
+                  className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none font-mono uppercase"
+                />
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Permite al empleado auto-darse de alta y resetear su contraseña con su documento oficial.
+                </p>
+              </div>
+
+              <div>
                 <label className="block font-semibold mb-1">Alias (separados por coma)</label>
                 <input
                   type="text"
@@ -419,6 +452,17 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
                   onChange={e => setEditingUser({ ...editingUser, name: e.target.value })}
                   className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
                   required
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">DNI / NIE</label>
+                <input
+                  type="text"
+                  value={editingUser.dni || ''}
+                  onChange={e => setEditingUser({ ...editingUser, dni: e.target.value })}
+                  placeholder="Ej: 43134155-R"
+                  className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none font-mono uppercase"
                 />
               </div>
 

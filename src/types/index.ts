@@ -5,11 +5,14 @@ export interface User {
   name: string;
   aliases: string[];
   email: string;
+  dni?: string;
   phone?: string;
   role: Role;
   status: 'active' | 'deactivated' | 'deleted';
   tempPassword?: string;
   mustChangePassword?: boolean;
+  registeredAt?: string;
+  lastPasswordResetAt?: string;
   createdAt?: string;
   updatedAt?: string;
 }

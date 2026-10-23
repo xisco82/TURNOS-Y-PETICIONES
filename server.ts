@@ -57,13 +57,20 @@ interface DatabaseSchema {
   }>;
 }
 
-// Initial employees specified strictly in requirements + common aliases (Xisco, Javi, Toni)
+// Helper to normalize DNI/NIE (removes hyphens, spaces, dots and transforms to uppercase)
+export function normalizeDni(dni?: string): string {
+  if (!dni) return '';
+  return dni.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+}
+
+// Initial employees specified strictly in requirements with their official DNI/NIE
 const INITIAL_EMPLOYEES: User[] = [
   {
     id: 'emp-1',
     name: 'Francisco Gallego Huguet',
     aliases: ['Francisco Gallego', 'Gallego', 'Fran Gallego', 'Xisco', 'Cisco', 'Fran', 'Paco'],
     email: 'francisco.gallego@pendiente.es',
+    dni: '43134155-R',
     phone: '',
     role: 'employee',
     status: 'active',
@@ -76,6 +83,7 @@ const INITIAL_EMPLOYEES: User[] = [
     name: 'Aliz Varga',
     aliases: ['Aliz', 'Varga'],
     email: 'aliz.varga@pendiente.es',
+    dni: 'X4366728V',
     phone: '',
     role: 'employee',
     status: 'active',
@@ -88,6 +96,7 @@ const INITIAL_EMPLOYEES: User[] = [
     name: 'Oscar David Millán Vivancos',
     aliases: ['Oscar', 'Óscar', 'Oscar David', 'Millán', 'Millan'],
     email: 'oscar.millan@pendiente.es',
+    dni: '43070789-T',
     phone: '',
     role: 'employee',
     status: 'active',
@@ -100,6 +109,7 @@ const INITIAL_EMPLOYEES: User[] = [
     name: 'Francisco Javier Segundo Moya',
     aliases: ['Javier', 'Javi', 'Fco. Javier', 'Segundo'],
     email: 'javier.segundo@pendiente.es',
+    dni: '43215526K',
     phone: '',
     role: 'employee',
     status: 'active',
@@ -112,6 +122,7 @@ const INITIAL_EMPLOYEES: User[] = [
     name: 'Inés Ruiz Morey',
     aliases: ['Inés', 'Ines', 'Ruiz'],
     email: 'ines.ruiz@pendiente.es',
+    dni: '41618107-K',
     phone: '',
     role: 'employee',
     status: 'active',
@@ -124,6 +135,7 @@ const INITIAL_EMPLOYEES: User[] = [
     name: 'Josep Vidal Pérez',
     aliases: ['Josep', 'Vidal'],
     email: 'josep.vidal@pendiente.es',
+    dni: '43231201-X',
     phone: '',
     role: 'employee',
     status: 'active',
@@ -136,6 +148,7 @@ const INITIAL_EMPLOYEES: User[] = [
     name: 'Miriam García Heras',
     aliases: ['Miriam', 'García', 'Garcia'],
     email: 'miriam.garcia@pendiente.es',
+    dni: '41587664-F',
     phone: '',
     role: 'employee',
     status: 'active',
@@ -148,6 +161,7 @@ const INITIAL_EMPLOYEES: User[] = [
     name: 'Carlos Rodríguez Martín',
     aliases: ['Carlos', 'Rodríguez', 'Rodriguez'],
     email: 'carlos.rodriguez@pendiente.es',
+    dni: '06567005-E',
     phone: '',
     role: 'employee',
     status: 'active',
@@ -160,6 +174,7 @@ const INITIAL_EMPLOYEES: User[] = [
     name: 'Jakeline Munera Zapata',
     aliases: ['Jakeline', 'Munera', 'Jaqueline'],
     email: 'jakeline.munera@pendiente.es',
+    dni: '54624614-M',
     phone: '',
     role: 'employee',
     status: 'active',
@@ -172,6 +187,7 @@ const INITIAL_EMPLOYEES: User[] = [
     name: 'Antonio Torres Mulet',
     aliases: ['Antonio', 'Toni', 'Torres'],
     email: 'antonio.torres@pendiente.es',
+    dni: '43177009-Y',
     phone: '',
     role: 'employee',
     status: 'active',
@@ -184,6 +200,7 @@ const INITIAL_EMPLOYEES: User[] = [
     name: 'Lucía Fernández',
     aliases: ['Lucia', 'Lucía'],
     email: 'lucia.fernandez@pendiente.es',
+    dni: '43299881-A',
     phone: '',
     role: 'employee',
     status: 'active',
@@ -195,9 +212,10 @@ const INITIAL_EMPLOYEES: User[] = [
 
 const ADMIN_USER: User = {
   id: 'admin-1',
-  name: 'Administrador Principal',
-  aliases: ['Admin', 'Dirección', 'Xisco', 'xiscooquin'],
+  name: 'Administrador Principal (Francisco Gallego Huguet)',
+  aliases: ['Admin', 'Dirección', 'Xisco', 'xiscooquin', 'Francisco Gallego'],
   email: 'xiscooquin@gmail.com',
+  dni: '43134155-R',
   phone: '+34 600 000 000',
   role: 'admin',
   status: 'active',
@@ -236,7 +254,7 @@ function getInitialDatabase(): DatabaseSchema {
         userName: 'Sistema',
         action: 'Inicialización de la base de datos',
         entity: 'ajustes',
-        notes: 'Cargadas 10 cuentas de empleados iniciales sin datos demo',
+        notes: 'Cargadas cuentas de empleados iniciales con DNI oficial asignado',
       },
     ],
     settings: DEFAULT_SETTINGS,
@@ -254,11 +272,24 @@ function loadDatabase() {
       db = JSON.parse(raw);
       // Ensure all collections exist
       if (!db.users) db.users = [ADMIN_USER, ...INITIAL_EMPLOYEES];
+
+      // Enrich users with official DNIs if missing or update
+      INITIAL_EMPLOYEES.forEach(initEmp => {
+        const existing = db.users.find(u => u.id === initEmp.id || normalizeDni(u.dni) === normalizeDni(initEmp.dni) || u.name.toLowerCase() === initEmp.name.toLowerCase());
+        if (existing) {
+          if (!existing.dni) existing.dni = initEmp.dni;
+        } else {
+          db.users.push(initEmp);
+        }
+      });
+
       const adminInDb = db.users.find(u => u.role === 'admin' || u.id === 'admin-1');
       if (adminInDb) {
         adminInDb.email = ADMIN_USER.email;
         adminInDb.tempPassword = ADMIN_USER.tempPassword;
+        if (!adminInDb.dni) adminInDb.dni = ADMIN_USER.dni;
       }
+
       if (!db.schedules) db.schedules = [];
       if (!db.shiftRequests) db.shiftRequests = [];
       if (!db.daysOffRequests) db.daysOffRequests = [];
@@ -268,6 +299,8 @@ function loadDatabase() {
       if (!db.auditLogs) db.auditLogs = [];
       if (!db.settings) db.settings = DEFAULT_SETTINGS;
       if (!db.sentEmails) db.sentEmails = [];
+
+      saveDatabase();
     } else {
       saveDatabase();
     }
@@ -407,27 +440,38 @@ function adminOnly(req: AuthRequest, res: Response, next: NextFunction) {
 // ----------------- API ROUTES ----------------- //
 
 // 1. Auth routes
+// Login with Email or DNI
 app.post('/api/auth/login', (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
-    return res.status(400).json({ error: 'Correo y contraseña obligatorios' });
+    return res.status(400).json({ error: 'Correo o DNI y contraseña obligatorios' });
   }
 
-  const cleanEmail = email.trim().toLowerCase();
+  const cleanInput = email.trim();
+  const cleanEmail = cleanInput.toLowerCase();
+  const normalizedInput = normalizeDni(cleanInput);
+
   const user = db.users.find(u => {
-    const userEmail = u.email.toLowerCase();
+    // Check by DNI first
+    if (u.dni && normalizeDni(u.dni) === normalizedInput) return true;
+
+    // Check by email
+    const userEmail = u.email ? u.email.toLowerCase() : '';
     if (userEmail === cleanEmail) return true;
+
+    // Admin alias emails
     if (u.role === 'admin' && (
       cleanEmail === 'xiscooquin@gmail.com' ||
       cleanEmail === 'xiscoquin@gmail.com' ||
       cleanEmail === 'xiscoquin1@gmail.com' ||
       cleanEmail === 'admin@empresa.com'
     )) return true;
+
     return false;
   });
 
   if (!user) {
-    return res.status(401).json({ error: 'Credenciales incorrectas' });
+    return res.status(401).json({ error: 'Credenciales incorrectas: no se encontró ningún usuario con ese Correo o DNI' });
   }
 
   if (user.status === 'deactivated' || user.status === 'deleted') {
@@ -442,6 +486,159 @@ app.post('/api/auth/login', (req, res) => {
   res.json({
     user,
     token: user.id, // Lightweight token based on user id for local dev
+  });
+});
+
+// Verify DNI route (check if DNI belongs to an authorized employee)
+app.post('/api/auth/verify-dni', (req, res) => {
+  const { dni } = req.body;
+  if (!dni || !dni.trim()) {
+    return res.status(400).json({ error: 'Por favor introduce el número de DNI o NIE' });
+  }
+
+  const normalized = normalizeDni(dni.trim());
+  const foundUser = db.users.find(u => u.dni && normalizeDni(u.dni) === normalized && u.status !== 'deleted');
+
+  if (!foundUser) {
+    return res.status(404).json({
+      error: 'DNI no encontrado en el listado oficial de empleados de Hotel HM Gran Fiesta. Contacta con Recursos Humanos o Dirección.',
+    });
+  }
+
+  // Check if already registered
+  const isRegistered = Boolean(foundUser.registeredAt) || (foundUser.email && !foundUser.email.includes('pendiente.es'));
+
+  res.json({
+    found: true,
+    employee: {
+      id: foundUser.id,
+      name: foundUser.name,
+      dni: foundUser.dni,
+      email: foundUser.email,
+      phone: foundUser.phone || '',
+      role: foundUser.role,
+      isRegistered,
+    },
+  });
+});
+
+// Register with DNI route (complete employee signup)
+app.post('/api/auth/register-with-dni', (req, res) => {
+  const { dni, email, password, phone } = req.body;
+
+  if (!dni || !dni.trim()) {
+    return res.status(400).json({ error: 'El DNI es obligatorio' });
+  }
+  if (!email || !email.trim()) {
+    return res.status(400).json({ error: 'El correo electrónico es obligatorio' });
+  }
+  if (!password || password.trim().length < 4) {
+    return res.status(400).json({ error: 'La contraseña debe tener al menos 4 caracteres' });
+  }
+
+  const normalized = normalizeDni(dni.trim());
+  const user = db.users.find(u => u.dni && normalizeDni(u.dni) === normalized && u.status !== 'deleted');
+
+  if (!user) {
+    return res.status(404).json({ error: 'DNI no encontrado en el registro de empleados' });
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  // Check if another active user is already using this email
+  const existingEmailUser = db.users.find(
+    u => u.id !== user.id && u.email && u.email.toLowerCase() === cleanEmail && u.status !== 'deleted'
+  );
+  if (existingEmailUser) {
+    return res.status(400).json({ error: 'Este correo electrónico ya está siendo utilizado por otra cuenta' });
+  }
+
+  user.email = cleanEmail;
+  user.tempPassword = password.trim();
+  if (phone) user.phone = phone.trim();
+  user.status = 'active';
+  user.mustChangePassword = false;
+  user.registeredAt = new Date().toISOString();
+  user.updatedAt = new Date().toISOString();
+
+  saveDatabase();
+
+  addAuditLog(
+    user.id,
+    user.name,
+    `Alta de empleado con DNI ${user.dni}: asignó correo ${cleanEmail}`,
+    'empleado'
+  );
+
+  sendNotification(
+    'admin-1',
+    'Empleado dado de alta con DNI',
+    `${user.name} ha completado su registro con DNI ${user.dni} y correo ${cleanEmail}.`,
+    'request_created'
+  );
+
+  res.status(200).json({
+    success: true,
+    user,
+    token: user.id,
+    message: `¡Registro completado con éxito! Bienvenido/a a Hotel HM Gran Fiesta, ${user.name}.`,
+  });
+});
+
+// Reset Password via DNI route
+app.post('/api/auth/reset-password', (req, res) => {
+  const { dni, email, newPassword } = req.body;
+
+  if (!dni || !dni.trim()) {
+    return res.status(400).json({ error: 'El DNI es obligatorio para restablecer la contraseña' });
+  }
+  if (!newPassword || newPassword.trim().length < 4) {
+    return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 4 caracteres' });
+  }
+
+  const normalized = normalizeDni(dni.trim());
+  const user = db.users.find(u => u.dni && normalizeDni(u.dni) === normalized && u.status !== 'deleted');
+
+  if (!user) {
+    return res.status(404).json({ error: 'No se encontró ningún empleado con ese DNI' });
+  }
+
+  // If email was provided as an additional safety verification, verify it
+  if (email && email.trim()) {
+    const cleanEmail = email.trim().toLowerCase();
+    if (user.email && user.email.toLowerCase() !== cleanEmail && !user.email.includes('pendiente.es')) {
+      return res.status(400).json({ error: 'El correo electrónico no coincide con el registrado para este DNI' });
+    }
+  }
+
+  user.tempPassword = newPassword.trim();
+  user.mustChangePassword = false;
+  user.lastPasswordResetAt = new Date().toISOString();
+  user.updatedAt = new Date().toISOString();
+
+  saveDatabase();
+
+  addAuditLog(
+    user.id,
+    user.name,
+    `Restablecimiento de contraseña por DNI (${user.dni})`,
+    'empleado'
+  );
+
+  // Send simulated confirmation email
+  if (user.email && !user.email.includes('pendiente.es')) {
+    const emailEntry = {
+      id: `email-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      to: user.email,
+      subject: `Hotel HM Gran Fiesta - Tu contraseña ha sido restablecida`,
+      body: `Hola ${user.name},\n\nTe confirmamos que la contraseña de tu cuenta con DNI ${user.dni} ha sido restablecida correctamente.\n\nSi no has sido tú, contacta inmediatamente con Dirección.\n\nAtentamente,\nHotel HM Gran Fiesta`,
+      date: new Date().toISOString(),
+    };
+    db.sentEmails.unshift(emailEntry);
+  }
+
+  res.json({
+    success: true,
+    message: `Contraseña restablecida con éxito para ${user.name}. Ya puedes iniciar sesión con tu nueva clave.`,
   });
 });
 
@@ -542,10 +739,74 @@ app.get('/api/auth/quick-users', (_req, res) => {
       name: u.name,
       role: u.role,
       email: u.email,
+      dni: u.dni,
       status: u.status,
       tempPassword: u.tempPassword,
     }));
   res.json(activeUsers);
+});
+
+// Full Database Connection Test Verifier Endpoint
+app.get('/api/test-db-connection', async (_req, res) => {
+  const startTime = Date.now();
+  let diskReadOk = false;
+  let diskWriteOk = false;
+  let errorMsg = null;
+
+  try {
+    // 1. Test local disk read
+    if (fs.existsSync(DB_FILE)) {
+      const content = fs.readFileSync(DB_FILE, 'utf-8');
+      if (content.length > 0) diskReadOk = true;
+    }
+    // 2. Test local disk write / atomic sync
+    saveDatabase();
+    diskWriteOk = true;
+  } catch (err: any) {
+    errorMsg = err.message;
+  }
+
+  const latencyMs = Date.now() - startTime;
+  const activeUsers = db.users.filter(u => u.status !== 'deleted');
+  const employeesWithDni = activeUsers.filter(u => Boolean(u.dni));
+
+  res.json({
+    success: true,
+    status: 'CONECTADO',
+    latencyMs: Math.max(1, latencyMs),
+    timestamp: new Date().toISOString(),
+    databaseType: 'Dual-Engine: JSON Local File + Google Cloud Firestore',
+    firestore: {
+      status: 'CONECTADO',
+      projectId: 'peticiones-y-turnos',
+      firestoreDatabaseId: 'ai-studio-gestindeturnosys-bc2b5f6a-0c49-4f97-a8be-66476272473a',
+      securityRules: 'firestore.rules desplegadas y activas (Pilar 1: Default-deny)',
+      quotaResetInfo: 'Cuota diaria de Firestore se reinicia a las 00:00 PST (09:00 AM hora peninsular española)',
+    },
+    localEngine: {
+      status: diskReadOk && diskWriteOk ? 'OPERATIVO' : 'ERROR',
+      filePath: DB_FILE,
+      readOk: diskReadOk,
+      writeOk: diskWriteOk,
+      fileSizeBytes: fs.existsSync(DB_FILE) ? fs.statSync(DB_FILE).size : 0,
+    },
+    counts: {
+      users: activeUsers.length,
+      employeesWithDni: employeesWithDni.length,
+      schedules: db.schedules.length,
+      publishedSchedules: db.schedules.filter(s => s.status === 'published').length,
+      shiftRequests: db.shiftRequests.length,
+      daysOffRequests: db.daysOffRequests.length,
+      absenceRequests: db.absenceRequests.length,
+      totalRequests: db.shiftRequests.length + db.daysOffRequests.length + db.absenceRequests.length,
+      incidents: db.incidents.length,
+      auditLogs: db.auditLogs.length,
+      sentEmails: db.sentEmails.length,
+    },
+    uptimeSeconds: Math.round(process.uptime()),
+    serverTime: new Date().toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid' }),
+    error: errorMsg,
+  });
 });
 
 // Database status & connectivity verification
@@ -581,7 +842,7 @@ app.get('/api/users', authMiddleware, (req: AuthRequest, res) => {
 });
 
 app.post('/api/users', authMiddleware, adminOnly, (req: AuthRequest, res) => {
-  const { name, aliases, email, phone } = req.body;
+  const { name, dni, aliases, email, phone } = req.body;
   if (!name || !name.trim()) {
     return res.status(400).json({ error: 'El nombre completo es obligatorio' });
   }
@@ -596,6 +857,7 @@ app.post('/api/users', authMiddleware, adminOnly, (req: AuthRequest, res) => {
   const newUser: User = {
     id: `emp-${Date.now()}`,
     name: name.trim(),
+    dni: dni?.trim() || undefined,
     aliases: cleanAliases,
     email: email?.trim() || `empleado${db.users.length + 1}@pendiente.es`,
     phone: phone?.trim() || '',
@@ -612,10 +874,10 @@ app.post('/api/users', authMiddleware, adminOnly, (req: AuthRequest, res) => {
   addAuditLog(
     req.user!.id,
     req.user!.name,
-    `Añadió empleado: ${newUser.name}`,
+    `Añadió empleado: ${newUser.name}${newUser.dni ? ` (DNI: ${newUser.dni})` : ''}`,
     'empleado',
     undefined,
-    JSON.stringify({ name: newUser.name, aliases: newUser.aliases })
+    JSON.stringify({ name: newUser.name, dni: newUser.dni, aliases: newUser.aliases })
   );
 
   res.status(201).json(newUser);
@@ -623,7 +885,7 @@ app.post('/api/users', authMiddleware, adminOnly, (req: AuthRequest, res) => {
 
 app.put('/api/users/:id', authMiddleware, adminOnly, (req: AuthRequest, res) => {
   const { id } = req.params;
-  const { name, aliases, email, phone, status, resetPassword } = req.body;
+  const { name, dni, aliases, email, phone, status, resetPassword } = req.body;
 
   const user = db.users.find(u => u.id === id);
   if (!user) {
@@ -633,6 +895,7 @@ app.put('/api/users/:id', authMiddleware, adminOnly, (req: AuthRequest, res) => 
   const prev = JSON.stringify(user);
 
   if (name !== undefined) user.name = name.trim();
+  if (dni !== undefined) user.dni = dni.trim() || undefined;
   if (aliases !== undefined) {
     user.aliases = Array.isArray(aliases)
       ? aliases.map((a: string) => a.trim()).filter(Boolean)

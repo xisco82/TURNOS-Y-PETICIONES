@@ -2,13 +2,15 @@
   "users": [
     {
       "id": "admin-1",
-      "name": "Administrador Principal",
+      "name": "Administrador Principal (Francisco Gallego Huguet)",
       "aliases": [
         "Admin",
         "Dirección",
-        "xiscooquin"
+        "xiscooquin",
+        "Francisco Gallego"
       ],
       "email": "xiscooquin@gmail.com",
+      "dni": "43134155-R",
       "phone": "+34 600 000 000",
       "role": "admin",
       "status": "active",
@@ -29,6 +31,7 @@
         "Paco"
       ],
       "email": "francisco.gallego@pendiente.es",
+      "dni": "43134155-R",
       "phone": "",
       "role": "employee",
       "status": "active",
@@ -44,6 +47,7 @@
         "Varga"
       ],
       "email": "aliz.varga@pendiente.es",
+      "dni": "X4366728V",
       "phone": "",
       "role": "employee",
       "status": "active",
@@ -62,6 +66,7 @@
         "Millan"
       ],
       "email": "oscar.millan@pendiente.es",
+      "dni": "43070789-T",
       "phone": "",
       "role": "employee",
       "status": "active",
@@ -79,6 +84,7 @@
         "Segundo"
       ],
       "email": "javier.segundo@pendiente.es",
+      "dni": "43215526K",
       "phone": "",
       "role": "employee",
       "status": "active",
@@ -95,6 +101,7 @@
         "Ruiz"
       ],
       "email": "ines.ruiz@pendiente.es",
+      "dni": "41618107-K",
       "phone": "",
       "role": "employee",
       "status": "active",
@@ -110,6 +117,7 @@
         "Vidal"
       ],
       "email": "josep.vidal@pendiente.es",
+      "dni": "43231201-X",
       "phone": "",
       "role": "employee",
       "status": "active",
@@ -126,6 +134,7 @@
         "Garcia"
       ],
       "email": "miriam.garcia@pendiente.es",
+      "dni": "41587664-F",
       "phone": "",
       "role": "employee",
       "status": "active",
@@ -142,6 +151,7 @@
         "Rodriguez"
       ],
       "email": "carlos.rodriguez@pendiente.es",
+      "dni": "06567005-E",
       "phone": "",
       "role": "employee",
       "status": "active",
@@ -158,6 +168,7 @@
         "Jaqueline"
       ],
       "email": "jakeline.munera@pendiente.es",
+      "dni": "54624614-M",
       "phone": "",
       "role": "employee",
       "status": "active",
@@ -174,6 +185,7 @@
         "Torres"
       ],
       "email": "antonio.torres@pendiente.es",
+      "dni": "43177009-Y",
       "phone": "",
       "role": "employee",
       "status": "active",
@@ -189,6 +201,7 @@
         "Lucía"
       ],
       "email": "lucia.fernandez@pendiente.es",
+      "dni": "43299881-A",
       "phone": "",
       "role": "employee",
       "status": "active",

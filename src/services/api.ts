@@ -84,8 +84,94 @@ export const api = {
     return request<User[]>('/api/auth/quick-users');
   },
 
+  async verifyDni(dni: string): Promise<{
+    found: boolean;
+    employee: {
+      id: string;
+      name: string;
+      dni: string;
+      email: string;
+      phone: string;
+      role: string;
+      isRegistered: boolean;
+    };
+  }> {
+    return request('/api/auth/verify-dni', {
+      method: 'POST',
+      body: JSON.stringify({ dni }),
+    });
+  },
+
+  async registerWithDni(data: {
+    dni: string;
+    email: string;
+    password: string;
+    phone?: string;
+  }): Promise<{ success: boolean; user: User; token: string; message: string }> {
+    const res = await request<{ success: boolean; user: User; token: string; message: string }>(
+      '/api/auth/register-with-dni',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
+    setStoredToken(res.token);
+    return res;
+  },
+
+  async resetPassword(data: {
+    dni: string;
+    email?: string;
+    newPassword: string;
+  }): Promise<{ success: boolean; message: string }> {
+    return request<{ success: boolean; message: string }>('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   async getDbStatus(): Promise<any> {
     return request<any>('/api/db/status');
+  },
+
+  async testDbConnection(): Promise<{
+    success: boolean;
+    status: string;
+    latencyMs: number;
+    timestamp: string;
+    databaseType: string;
+    firestore: {
+      status: string;
+      projectId: string;
+      firestoreDatabaseId: string;
+      securityRules: string;
+      quotaResetInfo: string;
+    };
+    localEngine: {
+      status: string;
+      filePath: string;
+      readOk: boolean;
+      writeOk: boolean;
+      fileSizeBytes: number;
+    };
+    counts: {
+      users: number;
+      employeesWithDni: number;
+      schedules: number;
+      publishedSchedules: number;
+      shiftRequests: number;
+      daysOffRequests: number;
+      absenceRequests: number;
+      totalRequests: number;
+      incidents: number;
+      auditLogs: number;
+      sentEmails: number;
+    };
+    uptimeSeconds: number;
+    serverTime: string;
+    error: string | null;
+  }> {
+    return request('/api/test-db-connection');
   },
 
   // Users

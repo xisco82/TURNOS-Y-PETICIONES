@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Check,
   ExternalLink,
+  Database,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { PWAInstallButton } from './PWAInstallButton';
@@ -19,6 +20,7 @@ import { api } from '../services/api';
 import { APP_BRAND } from '../constants/branding';
 import { InteractiveLogo } from './InteractiveLogo';
 import { DatabaseSyncIndicator } from './DatabaseSyncIndicator';
+import { DatabaseConnectionVerifierModal } from './DatabaseConnectionVerifierModal';
 
 interface HeaderProps {
   activeTab: string;
@@ -38,6 +40,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [showNotifPopover, setShowNotifPopover] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showDbVerifier, setShowDbVerifier] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [passwordMsg, setPasswordMsg] = useState<{ text: string; success: boolean } | null>(null);
 
@@ -108,6 +111,17 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Quick-switch user bar & actions */}
           <div className="flex items-center gap-2 sm:gap-3">
             <DatabaseSyncIndicator variant="badge" />
+
+            {/* Dedicated Verificador de Test de Conexión Button */}
+            <button
+              onClick={() => setShowDbVerifier(true)}
+              className="hidden lg:flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/70 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 transition cursor-pointer"
+              title="Abrir Verificador de test de conexión con la base de datos"
+            >
+              <Database className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+              <span>Verificador BD</span>
+            </button>
+
             <PWAInstallButton />
 
             {/* Test Suite Button */}
@@ -458,6 +472,12 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
       )}
+
+      {/* Database Connection Verifier Modal */}
+      <DatabaseConnectionVerifierModal
+        isOpen={showDbVerifier}
+        onClose={() => setShowDbVerifier(false)}
+      />
     </header>
   );
 };
