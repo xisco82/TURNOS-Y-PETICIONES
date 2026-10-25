@@ -29,11 +29,13 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editAliasesText, setEditAliasesText] = useState('');
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
     name: '',
+    dni: '',
     aliases: '',
     email: '',
     phone: '',
@@ -43,6 +45,11 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
   const [newPasswordCreated, setNewPasswordCreated] = useState<{ name: string; pass: string } | null>(null);
   const [errorNotification, setErrorNotification] = useState<string | null>(null);
   const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
+
+  const startEdit = (user: User) => {
+    setEditingUser(user);
+    setEditAliasesText(user.aliases ? user.aliases.join(', ') : '');
+  };
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -57,6 +64,7 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
     try {
       const created = await api.createUser({
         name: formData.name.trim(),
+        dni: formData.dni.trim() || undefined,
         aliases: formData.aliases ? formData.aliases.split(',').map(s => s.trim()).filter(Boolean) : [],
         email: formData.email.trim() || undefined,
         phone: formData.phone.trim() || undefined,
@@ -64,7 +72,7 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
 
       setNewPasswordCreated({ name: created.name, pass: created.tempPassword || 'emp1234' });
       setShowAddModal(false);
-      setFormData({ name: '', aliases: '', email: '', phone: '' });
+      setFormData({ name: '', dni: '', aliases: '', email: '', phone: '' });
       onRefresh();
     } catch (err: any) {
       setErrorNotification(err.message || 'Error al añadir empleado');
@@ -76,9 +84,14 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
     if (!editingUser) return;
 
     try {
+      const cleanAliases = editAliasesText
+        ? editAliasesText.split(',').map(s => s.trim()).filter(Boolean)
+        : [];
+
       await api.updateUser(editingUser.id, {
         name: editingUser.name,
-        aliases: editingUser.aliases,
+        dni: editingUser.dni,
+        aliases: cleanAliases,
         email: editingUser.email,
         phone: editingUser.phone,
         status: editingUser.status,
@@ -102,9 +115,10 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
 
   const handleDeleteConfirmed = async (mode: 'deactivate' | 'permanent') => {
     if (!deletingUser) return;
+    const targetUser = deletingUser;
+    setDeletingUser(null);
     try {
-      await api.deleteUser(deletingUser.id, mode);
-      setDeletingUser(null);
+      await api.deleteUser(targetUser.id, mode);
       onRefresh();
     } catch (err: any) {
       setErrorNotification(err.message || 'Error al eliminar');
@@ -136,21 +150,21 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <div className="relative">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-initial">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
             <input
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Buscar por nombre o alias..."
-              className="pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500 w-52"
+              className="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500 sm:w-52"
             />
           </div>
 
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/20 active:scale-95 transition"
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/20 active:scale-95 transition min-h-[40px] cursor-pointer"
           >
             <UserPlus className="w-4 h-4" />
             <span>Añadir Empleado</span>
@@ -219,15 +233,31 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
                       </span>
                     )}
                   </div>
-                  <span
-                    className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1 ${
-                      emp.status === 'active'
-                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60'
-                        : 'bg-slate-200 text-slate-600 dark:bg-slate-800'
-                    }`}
-                  >
-                    {emp.status === 'active' ? 'Cuenta Activa' : 'Desactivada'}
-                  </span>
+                  <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                    <span
+                      className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        emp.status === 'active'
+                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60'
+                          : 'bg-slate-200 text-slate-600 dark:bg-slate-800'
+                      }`}
+                    >
+                      {emp.status === 'active' ? 'Cuenta Activa' : 'Desactivada'}
+                    </span>
+                    {emp.dni && (
+                      <span className="inline-block text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
+                        DNI: {emp.dni}
+                      </span>
+                    )}
+                    {emp.registeredAt ? (
+                      <span className="inline-block text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                        ✓ Alta completada
+                      </span>
+                    ) : (
+                      <span className="inline-block text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                        Pendiente de alta
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Edit & Delete Buttons */}
@@ -336,8 +366,8 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
 
       {/* ADD EMPLOYEE MODAL */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 p-4 sm:p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95 max-h-[92vh] overflow-y-auto">
             <h3 className="font-bold text-base text-slate-900 dark:text-white mb-3">Añadir Nuevo Empleado</h3>
             <form onSubmit={handleAddSubmit} className="space-y-3 text-xs">
               <div>
@@ -350,6 +380,20 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
                   className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
                   required
                 />
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">DNI / NIE *</label>
+                <input
+                  type="text"
+                  value={formData.dni}
+                  onChange={e => setFormData({ ...formData, dni: e.target.value })}
+                  placeholder="Ej: 43134155-R"
+                  className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none font-mono uppercase"
+                />
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Permite al empleado auto-darse de alta y resetear su contraseña con su documento oficial.
+                </p>
               </div>
 
               <div>
@@ -407,8 +451,8 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
 
       {/* EDIT EMPLOYEE MODAL */}
       {editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 p-4 sm:p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95 max-h-[92vh] overflow-y-auto">
             <h3 className="font-bold text-base text-slate-900 dark:text-white mb-3">Editar Empleado</h3>
             <form onSubmit={handleEditSubmit} className="space-y-3 text-xs">
               <div>
@@ -419,6 +463,17 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
                   onChange={e => setEditingUser({ ...editingUser, name: e.target.value })}
                   className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
                   required
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">DNI / NIE</label>
+                <input
+                  type="text"
+                  value={editingUser.dni || ''}
+                  onChange={e => setEditingUser({ ...editingUser, dni: e.target.value })}
+                  placeholder="Ej: 43134155-R"
+                  className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none font-mono uppercase"
                 />
               </div>
 
@@ -557,3 +612,6 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
     </div>
   );
 };
+
+
+

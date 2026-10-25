@@ -2,13 +2,15 @@
   "users": [
     {
       "id": "admin-1",
-      "name": "Administrador Principal",
+      "name": "Administrador Principal (Francisco Gallego Huguet)",
       "aliases": [
         "Admin",
         "Dirección",
-        "xiscooquin"
+        "xiscooquin",
+        "Francisco Gallego"
       ],
       "email": "xiscooquin@gmail.com",
+      "dni": "43134155-R",
       "phone": "+34 600 000 000",
       "role": "admin",
       "status": "active",
@@ -29,6 +31,7 @@
         "Paco"
       ],
       "email": "francisco.gallego@pendiente.es",
+      "dni": "43134155-R",
       "phone": "",
       "role": "employee",
       "status": "active",
@@ -44,6 +47,7 @@
         "Varga"
       ],
       "email": "aliz.varga@pendiente.es",
+      "dni": "X4366728V",
       "phone": "",
       "role": "employee",
       "status": "active",
@@ -62,6 +66,7 @@
         "Millan"
       ],
       "email": "oscar.millan@pendiente.es",
+      "dni": "43070789-T",
       "phone": "",
       "role": "employee",
       "status": "active",
@@ -79,6 +84,7 @@
         "Segundo"
       ],
       "email": "javier.segundo@pendiente.es",
+      "dni": "43215526K",
       "phone": "",
       "role": "employee",
       "status": "active",
@@ -95,6 +101,7 @@
         "Ruiz"
       ],
       "email": "ines.ruiz@pendiente.es",
+      "dni": "41618107-K",
       "phone": "",
       "role": "employee",
       "status": "active",
@@ -110,6 +117,7 @@
         "Vidal"
       ],
       "email": "josep.vidal@pendiente.es",
+      "dni": "43231201-X",
       "phone": "",
       "role": "employee",
       "status": "active",
@@ -126,6 +134,7 @@
         "Garcia"
       ],
       "email": "miriam.garcia@pendiente.es",
+      "dni": "41587664-F",
       "phone": "",
       "role": "employee",
       "status": "active",
@@ -142,6 +151,7 @@
         "Rodriguez"
       ],
       "email": "carlos.rodriguez@pendiente.es",
+      "dni": "06567005-E",
       "phone": "",
       "role": "employee",
       "status": "active",
@@ -158,6 +168,7 @@
         "Jaqueline"
       ],
       "email": "jakeline.munera@pendiente.es",
+      "dni": "54624614-M",
       "phone": "",
       "role": "employee",
       "status": "active",
@@ -174,6 +185,7 @@
         "Torres"
       ],
       "email": "antonio.torres@pendiente.es",
+      "dni": "43177009-Y",
       "phone": "",
       "role": "employee",
       "status": "active",
@@ -189,6 +201,7 @@
         "Lucía"
       ],
       "email": "lucia.fernandez@pendiente.es",
+      "dni": "43299881-A",
       "phone": "",
       "role": "employee",
       "status": "active",
@@ -197,7 +210,1108 @@
       "createdAt": "2026-10-22T09:37:00.648Z"
     }
   ],
-  "schedules": [],
+  "schedules": [
+    {
+      "id": "sched-2026-11-02",
+      "weekStartDate": "2026-11-02",
+      "weekEndDate": "2026-11-08",
+      "weekLabel": "SEMANA DEL 02/11 AL 08/11 DE 2026",
+      "status": "published",
+      "version": 1,
+      "publishedAt": "2026-10-23T18:00:00.000Z",
+      "publishedBy": "Administrador Principal (Xisco G. H.)",
+      "changeReason": "Cuadrante oficial de la plantilla para la semana del 2 al 8 de noviembre 2026",
+      "rawInputText": "\t02/11\t03/11\t04/11\t05/11\t06/11\t07/11\t08/11\n\tLUNES\tMARTES\tMIERCOLES\tJUEVES\tVIERNES\tSABADO\tDOMINGO\nXISCO\tM\tM\tM\tM\tL\tL\t10:00-18:00\nALIZ\tL\tM\tM\tT\tM\tM\tL\nOSCAR\tL\tL\tN\tN\tN\tN\tN\nMIRIAM\tM\tL\tL\tM\tM\t10:00-18:00\t07:00-15:00\nJOSEP\tT\tT\tT\tL\tL\tT\tT\nJAVI\tM\tM\tM\tM\tM\tL\tL\nTONI\tBP\tBP\tBP\tBP\tBP\tBP\tBP\nINES\tT\tT\tL\tL\tT\tAP\tM\nCARLOS\tN\tN\tL\tL\tT\tT\tT\nJAKELINE\tL\tL\tT\tT\t10:00-18:00\tM\tM",
+      "rows": [
+        {
+          "employeeId": "emp-1",
+          "employeeName": "Francisco Gallego Huguet",
+          "totalHours": 40,
+          "warnings": [],
+          "days": {
+            "2026-11-02": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-03": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-04": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-05": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-06": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-07": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-08": {
+              "type": "work",
+              "startTime": "10:00",
+              "endTime": "18:00",
+              "rawText": "10:00-18:00",
+              "hours": 8
+            }
+          }
+        },
+        {
+          "employeeId": "emp-2",
+          "employeeName": "Aliz Varga",
+          "totalHours": 40,
+          "warnings": [],
+          "days": {
+            "2026-11-02": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-03": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-04": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-05": {
+              "type": "work",
+              "startTime": "16:00",
+              "endTime": "00:00",
+              "rawText": "T",
+              "hours": 8
+            },
+            "2026-11-06": {
+              "type": "work",
+              "startTime": "08:00",
+              "endTime": "16:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-07": {
+              "type": "work",
+              "startTime": "08:00",
+              "endTime": "16:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-08": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            }
+          }
+        },
+        {
+          "employeeId": "emp-3",
+          "employeeName": "Oscar David Millán Vivancos",
+          "totalHours": 40,
+          "warnings": [],
+          "days": {
+            "2026-11-02": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-03": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-04": {
+              "type": "work",
+              "startTime": "00:00",
+              "endTime": "08:00",
+              "rawText": "N",
+              "hours": 8,
+              "isOvernight": true
+            },
+            "2026-11-05": {
+              "type": "work",
+              "startTime": "00:00",
+              "endTime": "08:00",
+              "rawText": "N",
+              "hours": 8,
+              "isOvernight": true
+            },
+            "2026-11-06": {
+              "type": "work",
+              "startTime": "00:00",
+              "endTime": "08:00",
+              "rawText": "N",
+              "hours": 8,
+              "isOvernight": true
+            },
+            "2026-11-07": {
+              "type": "work",
+              "startTime": "00:00",
+              "endTime": "08:00",
+              "rawText": "N",
+              "hours": 8,
+              "isOvernight": true
+            },
+            "2026-11-08": {
+              "type": "work",
+              "startTime": "00:00",
+              "endTime": "08:00",
+              "rawText": "N",
+              "hours": 8,
+              "isOvernight": true
+            }
+          }
+        },
+        {
+          "employeeId": "emp-7",
+          "employeeName": "Miriam García Heras",
+          "totalHours": 40,
+          "warnings": [],
+          "days": {
+            "2026-11-02": {
+              "type": "work",
+              "startTime": "08:00",
+              "endTime": "16:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-03": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-04": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-05": {
+              "type": "work",
+              "startTime": "08:00",
+              "endTime": "16:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-06": {
+              "type": "work",
+              "startTime": "08:00",
+              "endTime": "16:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-07": {
+              "type": "work",
+              "startTime": "10:00",
+              "endTime": "18:00",
+              "rawText": "10:00-18:00",
+              "hours": 8
+            },
+            "2026-11-08": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "07:00-15:00",
+              "hours": 8
+            }
+          }
+        },
+        {
+          "employeeId": "emp-6",
+          "employeeName": "Josep Vidal Pérez",
+          "totalHours": 40,
+          "warnings": [],
+          "days": {
+            "2026-11-02": {
+              "type": "work",
+              "startTime": "16:00",
+              "endTime": "00:00",
+              "rawText": "T",
+              "hours": 8
+            },
+            "2026-11-03": {
+              "type": "work",
+              "startTime": "16:00",
+              "endTime": "00:00",
+              "rawText": "T",
+              "hours": 8
+            },
+            "2026-11-04": {
+              "type": "work",
+              "startTime": "16:00",
+              "endTime": "00:00",
+              "rawText": "T",
+              "hours": 8
+            },
+            "2026-11-05": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-06": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-07": {
+              "type": "work",
+              "startTime": "16:00",
+              "endTime": "00:00",
+              "rawText": "T",
+              "hours": 8
+            },
+            "2026-11-08": {
+              "type": "work",
+              "startTime": "16:00",
+              "endTime": "00:00",
+              "rawText": "T",
+              "hours": 8
+            }
+          }
+        },
+        {
+          "employeeId": "emp-4",
+          "employeeName": "Francisco Javier Segundo Moya",
+          "totalHours": 40,
+          "warnings": [],
+          "days": {
+            "2026-11-02": {
+              "type": "work",
+              "startTime": "08:00",
+              "endTime": "16:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-03": {
+              "type": "work",
+              "startTime": "08:00",
+              "endTime": "16:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-04": {
+              "type": "work",
+              "startTime": "08:00",
+              "endTime": "16:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-05": {
+              "type": "work",
+              "startTime": "08:00",
+              "endTime": "16:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-06": {
+              "type": "work",
+              "startTime": "08:00",
+              "endTime": "16:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-07": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-08": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            }
+          }
+        },
+        {
+          "employeeId": "emp-10",
+          "employeeName": "Antonio Torres Mulet",
+          "totalHours": 0,
+          "warnings": [],
+          "days": {
+            "2026-11-02": {
+              "type": "sick",
+              "rawText": "BP",
+              "hours": 0,
+              "note": "Baja Médica / IT"
+            },
+            "2026-11-03": {
+              "type": "sick",
+              "rawText": "BP",
+              "hours": 0,
+              "note": "Baja Médica / IT"
+            },
+            "2026-11-04": {
+              "type": "sick",
+              "rawText": "BP",
+              "hours": 0,
+              "note": "Baja Médica / IT"
+            },
+            "2026-11-05": {
+              "type": "sick",
+              "rawText": "BP",
+              "hours": 0,
+              "note": "Baja Médica / IT"
+            },
+            "2026-11-06": {
+              "type": "sick",
+              "rawText": "BP",
+              "hours": 0,
+              "note": "Baja Médica / IT"
+            },
+            "2026-11-07": {
+              "type": "sick",
+              "rawText": "BP",
+              "hours": 0,
+              "note": "Baja Médica / IT"
+            },
+            "2026-11-08": {
+              "type": "sick",
+              "rawText": "BP",
+              "hours": 0,
+              "note": "Baja Médica / IT"
+            }
+          }
+        },
+        {
+          "employeeId": "emp-5",
+          "employeeName": "Inés Ruiz Morey",
+          "totalHours": 32,
+          "warnings": [],
+          "days": {
+            "2026-11-02": {
+              "type": "work",
+              "startTime": "16:00",
+              "endTime": "00:00",
+              "rawText": "T",
+              "hours": 8
+            },
+            "2026-11-03": {
+              "type": "work",
+              "startTime": "16:00",
+              "endTime": "00:00",
+              "rawText": "T",
+              "hours": 8
+            },
+            "2026-11-04": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-05": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-06": {
+              "type": "work",
+              "startTime": "16:00",
+              "endTime": "00:00",
+              "rawText": "T",
+              "hours": 8
+            },
+            "2026-11-07": {
+              "type": "free",
+              "rawText": "AP",
+              "hours": 0,
+              "note": "Asuntos Propios (Permiso)"
+            },
+            "2026-11-08": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            }
+          }
+        },
+        {
+          "employeeId": "emp-8",
+          "employeeName": "Carlos Rodríguez Martín",
+          "totalHours": 40,
+          "warnings": [],
+          "days": {
+            "2026-11-02": {
+              "type": "work",
+              "startTime": "00:00",
+              "endTime": "08:00",
+              "rawText": "N",
+              "hours": 8,
+              "isOvernight": true
+            },
+            "2026-11-03": {
+              "type": "work",
+              "startTime": "00:00",
+              "endTime": "08:00",
+              "rawText": "N",
+              "hours": 8,
+              "isOvernight": true
+            },
+            "2026-11-04": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-05": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-06": {
+              "type": "work",
+              "startTime": "16:00",
+              "endTime": "00:00",
+              "rawText": "T",
+              "hours": 8
+            },
+            "2026-11-07": {
+              "type": "work",
+              "startTime": "16:00",
+              "endTime": "00:00",
+              "rawText": "T",
+              "hours": 8
+            },
+            "2026-11-08": {
+              "type": "work",
+              "startTime": "15:00",
+              "endTime": "23:00",
+              "rawText": "T",
+              "hours": 8
+            }
+          }
+        },
+        {
+          "employeeId": "emp-9",
+          "employeeName": "Jakeline Munera Zapata",
+          "totalHours": 40,
+          "warnings": [],
+          "days": {
+            "2026-11-02": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-03": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-04": {
+              "type": "work",
+              "startTime": "15:00",
+              "endTime": "23:00",
+              "rawText": "T",
+              "hours": 8
+            },
+            "2026-11-05": {
+              "type": "work",
+              "startTime": "15:00",
+              "endTime": "23:00",
+              "rawText": "T",
+              "hours": 8
+            },
+            "2026-11-06": {
+              "type": "work",
+              "startTime": "10:00",
+              "endTime": "18:00",
+              "rawText": "10:00-18:00",
+              "hours": 8
+            },
+            "2026-11-07": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-08": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "sch-1792783180907",
+      "weekStartDate": "2026-11-02",
+      "weekEndDate": "2026-11-08",
+      "weekLabel": "SEMANA DEL 02/11 AL 08/11 DE 2026",
+      "status": "published",
+      "version": 1,
+      "publishedAt": "2026-10-23T19:19:40.907Z",
+      "publishedBy": "Administrador Principal (Francisco Gallego Huguet)",
+      "rows": [
+        {
+          "employeeId": "emp-1",
+          "employeeName": "Francisco Gallego Huguet",
+          "totalHours": 40,
+          "warnings": [],
+          "days": {
+            "2026-11-02": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-03": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-04": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-05": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-06": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-07": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-08": {
+              "type": "work",
+              "startTime": "10:00",
+              "endTime": "18:00",
+              "rawText": "10:00-18:00",
+              "hours": 8,
+              "isOvernight": false
+            }
+          }
+        },
+        {
+          "employeeId": "emp-2",
+          "employeeName": "Aliz Varga",
+          "totalHours": 40,
+          "warnings": [],
+          "days": {
+            "2026-11-02": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-03": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-04": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-05": {
+              "type": "work",
+              "startTime": "15:00",
+              "endTime": "23:00",
+              "rawText": "T",
+              "hours": 8
+            },
+            "2026-11-06": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-07": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-08": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            }
+          }
+        },
+        {
+          "employeeId": "emp-3",
+          "employeeName": "Oscar David Millán Vivancos",
+          "totalHours": 40,
+          "warnings": [],
+          "days": {
+            "2026-11-02": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-03": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-04": {
+              "type": "work",
+              "startTime": "23:00",
+              "endTime": "07:00",
+              "rawText": "N",
+              "hours": 8,
+              "isOvernight": true
+            },
+            "2026-11-05": {
+              "type": "work",
+              "startTime": "23:00",
+              "endTime": "07:00",
+              "rawText": "N",
+              "hours": 8,
+              "isOvernight": true
+            },
+            "2026-11-06": {
+              "type": "work",
+              "startTime": "23:00",
+              "endTime": "07:00",
+              "rawText": "N",
+              "hours": 8,
+              "isOvernight": true
+            },
+            "2026-11-07": {
+              "type": "work",
+              "startTime": "23:00",
+              "endTime": "07:00",
+              "rawText": "N",
+              "hours": 8,
+              "isOvernight": true
+            },
+            "2026-11-08": {
+              "type": "work",
+              "startTime": "23:00",
+              "endTime": "07:00",
+              "rawText": "N",
+              "hours": 8,
+              "isOvernight": true
+            }
+          }
+        },
+        {
+          "employeeId": "emp-7",
+          "employeeName": "Miriam García Heras",
+          "totalHours": 40,
+          "warnings": [],
+          "days": {
+            "2026-11-02": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-03": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-04": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-05": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-06": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-07": {
+              "type": "work",
+              "startTime": "10:00",
+              "endTime": "18:00",
+              "rawText": "10:00-18:00",
+              "hours": 8,
+              "isOvernight": false
+            },
+            "2026-11-08": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "07:00-15:00",
+              "hours": 8,
+              "isOvernight": false
+            }
+          }
+        },
+        {
+          "employeeId": "emp-6",
+          "employeeName": "Josep Vidal Pérez",
+          "totalHours": 40,
+          "warnings": [],
+          "days": {
+            "2026-11-02": {
+              "type": "work",
+              "startTime": "15:00",
+              "endTime": "23:00",
+              "rawText": "T",
+              "hours": 8
+            },
+            "2026-11-03": {
+              "type": "work",
+              "startTime": "15:00",
+              "endTime": "23:00",
+              "rawText": "T",
+              "hours": 8
+            },
+            "2026-11-04": {
+              "type": "work",
+              "startTime": "15:00",
+              "endTime": "23:00",
+              "rawText": "T",
+              "hours": 8
+            },
+            "2026-11-05": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-06": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-07": {
+              "type": "work",
+              "startTime": "15:00",
+              "endTime": "23:00",
+              "rawText": "T",
+              "hours": 8
+            },
+            "2026-11-08": {
+              "type": "work",
+              "startTime": "15:00",
+              "endTime": "23:00",
+              "rawText": "T",
+              "hours": 8
+            }
+          }
+        },
+        {
+          "employeeId": "emp-4",
+          "employeeName": "Francisco Javier Segundo Moya",
+          "totalHours": 40,
+          "warnings": [],
+          "days": {
+            "2026-11-02": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-03": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-04": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-05": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-06": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-07": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-08": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            }
+          }
+        },
+        {
+          "employeeId": "emp-10",
+          "employeeName": "Antonio Torres Mulet",
+          "totalHours": 0,
+          "warnings": [],
+          "days": {
+            "2026-11-02": {
+              "type": "sick",
+              "rawText": "BP",
+              "hours": 0,
+              "note": "Baja Médica / IT"
+            },
+            "2026-11-03": {
+              "type": "sick",
+              "rawText": "BP",
+              "hours": 0,
+              "note": "Baja Médica / IT"
+            },
+            "2026-11-04": {
+              "type": "sick",
+              "rawText": "BP",
+              "hours": 0,
+              "note": "Baja Médica / IT"
+            },
+            "2026-11-05": {
+              "type": "sick",
+              "rawText": "BP",
+              "hours": 0,
+              "note": "Baja Médica / IT"
+            },
+            "2026-11-06": {
+              "type": "sick",
+              "rawText": "BP",
+              "hours": 0,
+              "note": "Baja Médica / IT"
+            },
+            "2026-11-07": {
+              "type": "sick",
+              "rawText": "BP",
+              "hours": 0,
+              "note": "Baja Médica / IT"
+            },
+            "2026-11-08": {
+              "type": "sick",
+              "rawText": "BP",
+              "hours": 0,
+              "note": "Baja Médica / IT"
+            }
+          }
+        },
+        {
+          "employeeId": "emp-5",
+          "employeeName": "Inés Ruiz Morey",
+          "totalHours": 32,
+          "warnings": [],
+          "days": {
+            "2026-11-02": {
+              "type": "work",
+              "startTime": "15:00",
+              "endTime": "23:00",
+              "rawText": "T",
+              "hours": 8
+            },
+            "2026-11-03": {
+              "type": "work",
+              "startTime": "15:00",
+              "endTime": "23:00",
+              "rawText": "T",
+              "hours": 8
+            },
+            "2026-11-04": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-05": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-06": {
+              "type": "work",
+              "startTime": "15:00",
+              "endTime": "23:00",
+              "rawText": "T",
+              "hours": 8
+            },
+            "2026-11-07": {
+              "type": "free",
+              "rawText": "AP",
+              "hours": 0,
+              "note": "Asuntos Propios (Permiso)"
+            },
+            "2026-11-08": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            }
+          }
+        },
+        {
+          "employeeId": "emp-8",
+          "employeeName": "Carlos Rodríguez Martín",
+          "totalHours": 40,
+          "warnings": [],
+          "days": {
+            "2026-11-02": {
+              "type": "work",
+              "startTime": "23:00",
+              "endTime": "07:00",
+              "rawText": "N",
+              "hours": 8,
+              "isOvernight": true
+            },
+            "2026-11-03": {
+              "type": "work",
+              "startTime": "23:00",
+              "endTime": "07:00",
+              "rawText": "N",
+              "hours": 8,
+              "isOvernight": true
+            },
+            "2026-11-04": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-05": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-06": {
+              "type": "work",
+              "startTime": "15:00",
+              "endTime": "23:00",
+              "rawText": "T",
+              "hours": 8
+            },
+            "2026-11-07": {
+              "type": "work",
+              "startTime": "15:00",
+              "endTime": "23:00",
+              "rawText": "T",
+              "hours": 8
+            },
+            "2026-11-08": {
+              "type": "work",
+              "startTime": "15:00",
+              "endTime": "23:00",
+              "rawText": "T",
+              "hours": 8
+            }
+          }
+        },
+        {
+          "employeeId": "emp-9",
+          "employeeName": "Jakeline Munera Zapata",
+          "totalHours": 40,
+          "warnings": [],
+          "days": {
+            "2026-11-02": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-03": {
+              "type": "free",
+              "rawText": "L",
+              "hours": 0
+            },
+            "2026-11-04": {
+              "type": "work",
+              "startTime": "15:00",
+              "endTime": "23:00",
+              "rawText": "T",
+              "hours": 8
+            },
+            "2026-11-05": {
+              "type": "work",
+              "startTime": "15:00",
+              "endTime": "23:00",
+              "rawText": "T",
+              "hours": 8
+            },
+            "2026-11-06": {
+              "type": "work",
+              "startTime": "10:00",
+              "endTime": "18:00",
+              "rawText": "10:00-18:00",
+              "hours": 8,
+              "isOvernight": false
+            },
+            "2026-11-07": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            },
+            "2026-11-08": {
+              "type": "work",
+              "startTime": "07:00",
+              "endTime": "15:00",
+              "rawText": "M",
+              "hours": 8
+            }
+          }
+        }
+      ],
+      "rawInputText": "\t02/11\t03/11\t04/11\t05/11\t06/11\t07/11\t08/11\n\tLUNES\tMARTES\tMIERCOLES\tJUEVES\tVIERNES\tSABADO\tDOMINGO\nXISCO\tM\tM\tM\tM\tL\tL\t10:00-18:00\nALIZ\tL\tM\tM\tT\tM\tM\tL\nOSCAR\tL\tL\tN\tN\tN\tN\tN\nMIRIAM\tM\tL\tL\tM\tM\t10:00-18:00\t07:00-15:00\nJOSEP\tT\tT\tT\tL\tL\tT\tT\nJAVI\tM\tM\tM\tM\tM\tL\tL\nTONI\tBP\tBP\tBP\tBP\tBP\tBP\tBP\nINES\tT\tT\tL\tL\tT\tAP\tM\nCARLOS\tN\tN\tL\tL\tT\tT\tT\nJAKELINE\tL\tL\tT\tT\t10:00-18:00\tM\tM",
+      "changeReason": "",
+      "createdAt": "2026-10-23T19:19:40.907Z",
+      "updatedAt": "2026-10-23T19:19:40.907Z"
+    }
+  ],
   "shiftRequests": [
     {
       "id": "req-sc-test-1",
@@ -358,6 +1472,206 @@
   ],
   "auditLogs": [
     {
+      "id": "log-1792782059920-sp7hm",
+      "timestamp": "2026-10-23T19:00:59.920Z",
+      "userId": "emp-9",
+      "userName": "Jakeline (Jakeline Munera Zapata)",
+      "action": "Test de conexión con la base de datos (Jakeline)",
+      "entity": "ajustes",
+      "newValue": "test de conexion de jakeline realizado con exito",
+      "notes": "Latencia: 77ms • Desde: Google Cloud Run (Servidor AI Studio)"
+    },
+    {
+      "id": "log-1792782051378-4zxf1",
+      "timestamp": "2026-10-23T19:00:51.378Z",
+      "userId": "emp-9",
+      "userName": "Jakeline (Jakeline Munera Zapata)",
+      "action": "Test de conexión con la base de datos (Jakeline)",
+      "entity": "ajustes",
+      "newValue": "test de conexion de jakeline realizado con exito",
+      "notes": "Latencia: 81ms • Desde: Google Cloud Run (Servidor AI Studio)"
+    },
+    {
+      "id": "log-1792781909034-5bq2m",
+      "timestamp": "2026-10-23T18:58:29.034Z",
+      "userId": "emp-9",
+      "userName": "Jakeline (Jakeline Munera Zapata)",
+      "action": "Test de conexión con la base de datos (Jakeline)",
+      "entity": "ajustes",
+      "newValue": "test de conexion de jakeline realizado con exito",
+      "notes": "Latencia: 102ms • Desde: Google Cloud Run (Servidor AI Studio)"
+    },
+    {
+      "id": "log-1792781907318-3uzn1",
+      "timestamp": "2026-10-23T18:58:27.318Z",
+      "userId": "emp-9",
+      "userName": "Jakeline (Jakeline Munera Zapata)",
+      "action": "Test de conexión con la base de datos (Jakeline)",
+      "entity": "ajustes",
+      "newValue": "test de conexion de jakeline realizado con exito",
+      "notes": "Latencia: 85ms • Desde: Google Cloud Run (Servidor AI Studio)"
+    },
+    {
+      "id": "log-1792781880074-u2uds",
+      "timestamp": "2026-10-23T18:58:00.075Z",
+      "userId": "emp-5",
+      "userName": "Inés (Inés Ruiz Morey)",
+      "action": "Test de conexión con la base de datos (Inés)",
+      "entity": "ajustes",
+      "newValue": "test de conexion de inés realizado con exito",
+      "notes": "Latencia: 96ms • Desde: Google Cloud Run (Servidor AI Studio)"
+    },
+    {
+      "id": "log-1792781878135-lj5fs",
+      "timestamp": "2026-10-23T18:57:58.135Z",
+      "userId": "emp-5",
+      "userName": "Inés (Inés Ruiz Morey)",
+      "action": "Test de conexión con la base de datos (Inés)",
+      "entity": "ajustes",
+      "newValue": "test de conexion de inés realizado con exito",
+      "notes": "Latencia: 113ms • Desde: Google Cloud Run (Servidor AI Studio)"
+    },
+    {
+      "id": "log-1792781874969-ntpm6",
+      "timestamp": "2026-10-23T18:57:54.969Z",
+      "userId": "emp-3",
+      "userName": "Oscar (Oscar David Millán Vivancos)",
+      "action": "Test de conexión con la base de datos (Oscar)",
+      "entity": "ajustes",
+      "newValue": "test de conexion de oscar realizado con exito",
+      "notes": "Latencia: 154ms • Desde: Google Cloud Run (Servidor AI Studio)"
+    },
+    {
+      "id": "log-1792781743649-ibeul",
+      "timestamp": "2026-10-23T18:55:43.649Z",
+      "userId": "emp-3",
+      "userName": "Oscar (Oscar David Millán Vivancos)",
+      "action": "Test de conexión con la base de datos (Oscar)",
+      "entity": "ajustes",
+      "newValue": "test de conexion de oscar realizado con exito",
+      "notes": "Latencia: 69ms • Desde: Google Cloud Run (Servidor AI Studio)"
+    },
+    {
+      "id": "log-1792781736524-1rlb7",
+      "timestamp": "2026-10-23T18:55:36.524Z",
+      "userId": "emp-3",
+      "userName": "Oscar (Oscar David Millán Vivancos)",
+      "action": "Test de conexión con la base de datos (Oscar)",
+      "entity": "ajustes",
+      "newValue": "test de conexion de oscar realizado con exito",
+      "notes": "Latencia: 87ms • Desde: Google Cloud Run (Servidor AI Studio)"
+    },
+    {
+      "id": "log-1792781317500-w1wcp",
+      "timestamp": "2026-10-23T18:48:37.500Z",
+      "userId": "emp-6",
+      "userName": "Josep (Josep Vidal Pérez)",
+      "action": "Test de conexión con la base de datos (Josep)",
+      "entity": "ajustes",
+      "newValue": "test de conexion de josep realizado con exito",
+      "notes": "Latencia: 12ms • Desde: Web Vercel CDN (turnos-y-peticiones.vercel.app)"
+    },
+    {
+      "id": "log-1792781310671-hi9e1",
+      "timestamp": "2026-10-23T18:48:30.671Z",
+      "userId": "emp-2",
+      "userName": "Aliz (Aliz Varga)",
+      "action": "Test de conexión con la base de datos (Aliz)",
+      "entity": "ajustes",
+      "newValue": "test de conexion de aliz realizado con exito",
+      "notes": "Latencia: 12ms • Desde: Web Vercel CDN (turnos-y-peticiones.vercel.app)"
+    },
+    {
+      "id": "log-1792781305769-pb6oc",
+      "timestamp": "2026-10-23T18:48:25.769Z",
+      "userId": "emp-4",
+      "userName": "Javi (Francisco Javier Segundo Moya)",
+      "action": "Test de conexión con la base de datos (Javi)",
+      "entity": "ajustes",
+      "newValue": "test de conexion de javi realizado con exito",
+      "notes": "Latencia: 12ms • Desde: Web Vercel CDN (turnos-y-peticiones.vercel.app)"
+    },
+    {
+      "id": "log-1792781298128-uns9u",
+      "timestamp": "2026-10-23T18:48:18.128Z",
+      "userId": "admin-1",
+      "userName": "Xisco G. H.",
+      "action": "Test de conexión con la base de datos",
+      "entity": "ajustes",
+      "newValue": "test de conexion de xisco realizado con exito",
+      "notes": "Latencia: 12ms • Firestore y Local"
+    },
+    {
+      "id": "log-1792780904480-0hv3m",
+      "timestamp": "2026-10-23T18:41:44.480Z",
+      "userId": "admin-1",
+      "userName": "Xisco G. H.",
+      "action": "Test de conexión con la base de datos",
+      "entity": "ajustes",
+      "newValue": "test de conexion de xisco realizado con exito",
+      "notes": "Latencia: 14ms • Firestore y Local"
+    },
+    {
+      "id": "log-1792780616767-8z64u",
+      "timestamp": "2026-10-23T18:36:56.767Z",
+      "userId": "admin-1",
+      "userName": "Xisco G. H.",
+      "action": "Test de conexión con la base de datos",
+      "entity": "ajustes",
+      "newValue": "test de conexion de xisco realizado con exito",
+      "notes": "Latencia: 85ms • Firestore y Local"
+    },
+    {
+      "id": "log-1792780611581-pesnv",
+      "timestamp": "2026-10-23T18:36:51.581Z",
+      "userId": "admin-1",
+      "userName": "Xisco G. H.",
+      "action": "Test de conexión con la base de datos",
+      "entity": "ajustes",
+      "newValue": "test de conexion de xisco realizado con exito",
+      "notes": "Latencia: 116ms • Firestore y Local"
+    },
+    {
+      "id": "log-1792780446436-rbiug",
+      "timestamp": "2026-10-23T18:34:06.436Z",
+      "userId": "admin-1",
+      "userName": "Xisco G. H.",
+      "action": "Test de conexión con la base de datos",
+      "entity": "ajustes",
+      "newValue": "test de conexion de xisco realizado con exito",
+      "notes": "Latencia: 158ms • Firestore y Local"
+    },
+    {
+      "id": "log-1792780444130-06wxm",
+      "timestamp": "2026-10-23T18:34:04.130Z",
+      "userId": "admin-1",
+      "userName": "Xisco G. H.",
+      "action": "Test de conexión con la base de datos",
+      "entity": "ajustes",
+      "newValue": "test de conexion de xisco realizado con exito",
+      "notes": "Latencia: 270ms • Firestore y Local"
+    },
+    {
+      "id": "log-1792780317798-u5sk8",
+      "timestamp": "2026-10-23T18:31:57.798Z",
+      "userId": "admin-1",
+      "userName": "Xisco G. H.",
+      "action": "Test de conexión con la base de datos",
+      "entity": "ajustes",
+      "newValue": "test de conexion de xisco realizado con exito",
+      "notes": "Latencia: 133ms • Firestore y Local"
+    },
+    {
+      "id": "log-1792779274926-8c7cc",
+      "timestamp": "2026-10-23T18:14:34.926Z",
+      "userId": "admin-1",
+      "userName": "Xisco G. H.",
+      "action": "Test de conexión con la base de datos",
+      "entity": "ajustes",
+      "newValue": "test de conexion de xisco realizado con exito",
+      "notes": "Latencia: 15ms • Firestore y Local"
+    },
+    {
       "id": "log-init",
       "timestamp": "2026-10-22T09:37:00.648Z",
       "userId": "admin-1",
@@ -389,3 +1703,5 @@
     }
   ]
 }
+
+

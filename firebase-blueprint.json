@@ -7,11 +7,13 @@
       "properties": {
         "id": { "type": "string", "maxLength": 128 },
         "name": { "type": "string", "maxLength": 150 },
+        "dni": { "type": "string", "maxLength": 30 },
         "aliases": { "type": "array" },
         "email": { "type": "string", "maxLength": 200 },
         "phone": { "type": "string", "maxLength": 50 },
         "role": { "type": "string", "enum": ["admin", "employee"] },
         "status": { "type": "string", "enum": ["active", "deactivated", "deleted"] },
+        "registeredAt": { "type": "string", "maxLength": 100 },
         "createdAt": { "type": "string", "maxLength": 100 }
       },
       "required": ["id", "name", "role", "status"]
@@ -94,6 +96,22 @@
         "timezone": { "type": "string", "maxLength": 100 }
       },
       "required": ["id", "companyName"]
+    },
+    "ConnectionTestLog": {
+      "title": "ConnectionTestLog",
+      "description": "Registry of connection tests performed by Xisco and administrators",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "message": { "type": "string", "maxLength": 500 },
+        "author": { "type": "string", "maxLength": 150 },
+        "authorDni": { "type": "string", "maxLength": 30 },
+        "status": { "type": "string", "maxLength": 50 },
+        "latencyMs": { "type": "number" },
+        "timestamp": { "type": "string", "maxLength": 100 },
+        "source": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["id", "message", "status", "timestamp"]
     }
   },
   "firestore": {
@@ -120,6 +138,13 @@
     "/settings/{settingId}": {
       "schema": "AppSettings",
       "description": "Global application configuration"
+    },
+    "/connection_tests/{testId}": {
+      "schema": "ConnectionTestLog",
+      "description": "Connection test records and markers written by Xisco and system"
     }
   }
 }
+
+
+

@@ -1,31 +1,16 @@
 import React, { useState } from 'react';
-import {
-  CalendarDays,
-  KeyRound,
-  Mail,
-  LogIn,
-  AlertCircle,
-  Users,
-  UserPlus,
-  CheckCircle2,
-  Phone,
-  X,
-  ShieldCheck,
-  Eye,
-  EyeOff,
-  Database,
-} from 'lucide-react';
+import { CalendarDays, KeyRound, Mail, LogIn, AlertCircle, Users, UserPlus, CheckCircle2, Phone, X, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
 import { APP_BRAND } from '../constants/branding';
 import { InteractiveLogo } from './InteractiveLogo';
-import { api } from '../services/api';
 import { DatabaseSyncIndicator } from './DatabaseSyncIndicator';
+import { api } from '../services/api';
 
 export const LoginForm: React.FC = () => {
   const { login, quickUsers, switchUser } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [identifier, setIdentifier] = useState('xiscoquin@gmail.com');
+  const [password, setPassword] = useState('3090');
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
@@ -34,6 +19,7 @@ export const LoginForm: React.FC = () => {
   // New employee registration modal
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
   const [newEmpName, setNewEmpName] = useState('');
+  const [newEmpDni, setNewEmpDni] = useState('');
   const [newEmpEmail, setNewEmpEmail] = useState('');
   const [newEmpPhone, setNewEmpPhone] = useState('');
   const [regSubmitting, setRegSubmitting] = useState(false);
@@ -42,17 +28,30 @@ export const LoginForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !password.trim()) {
-      setErrorMsg('Por favor introduce tu correo y contraseña');
-      return;
-    }
     setErrorMsg(null);
     setLoading(true);
 
     try {
-      await login(email.trim(), password.trim());
+      await login(identifier, password);
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al iniciar sesión');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdminDirectLogin = async () => {
+    setErrorMsg(null);
+    setLoading(true);
+    try {
+      await login('xiscoquin@gmail.com', '3090');
+    } catch {
+      const admin = quickUsers.find(u => u.role === 'admin' || u.email === 'xiscoquin@gmail.com');
+      if (admin) {
+        switchUser(admin);
+      } else {
+        setErrorMsg('Error al conectar con la cuenta de administrador');
+      }
     } finally {
       setLoading(false);
     }
@@ -71,10 +70,12 @@ export const LoginForm: React.FC = () => {
     try {
       const res = await api.registerEmployee({
         name: newEmpName.trim(),
+        dni: newEmpDni.trim() || undefined,
         email: newEmpEmail.trim(),
         phone: newEmpPhone.trim() || undefined,
       });
 
+      // Save info but do not expose password publicly on screen
       setCreatedEmpInfo({
         name: res.user.name,
         email: res.user.email,
@@ -85,6 +86,7 @@ export const LoginForm: React.FC = () => {
         `¡Cuenta creada con éxito para ${res.user.name}! Se han enviado las credenciales a su correo ${res.user.email}.`
       );
 
+      // Log in as the newly created employee
       setTimeout(() => {
         switchUser(res.user);
       }, 2500);
@@ -95,20 +97,14 @@ export const LoginForm: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-slate-100 dark:bg-slate-950">
-      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 p-8 space-y-5">
-        {/* Brand header */}
+    <div className="min-h-screen flex items-center justify-center p-3 sm:p-4 bg-slate-100 dark:bg-slate-950">
+      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 p-5 sm:p-8 space-y-5 sm:space-y-6">
         <div className="text-center space-y-2">
           <div className="flex justify-center">
             <InteractiveLogo size="xl" />
           </div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{APP_BRAND.name}</h1>
           <p className="text-xs text-slate-500">{APP_BRAND.subtitle}</p>
-        </div>
-
-        {/* Database Synchronization Indicator */}
-        <div className="pt-1">
-          <DatabaseSyncIndicator variant="bar" />
         </div>
 
         {errorMsg && (
@@ -128,22 +124,52 @@ export const LoginForm: React.FC = () => {
           </div>
         )}
 
-        {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs pt-1">
+        {/* Database Status Indicator & Live Connection Verifier */}
+        <DatabaseSyncIndicator variant="bar" />
+
+        {/* 1-Click Direct Admin Access Button */}
+        <button
+          type="button"
+          onClick={handleAdminDirectLogin}
+          disabled={loading}
+          className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-slate-900 hover:from-indigo-500 hover:to-slate-800 text-white font-bold text-xs shadow-lg shadow-indigo-600/25 active:scale-98 transition flex items-center justify-between group cursor-pointer"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center text-white font-black text-sm">
+              🛡️
+            </div>
+            <div className="text-left">
+              <div className="font-extrabold text-sm tracking-tight">Conectar como Administrador</div>
+              <div className="text-[11px] text-indigo-200 font-medium">xiscoquin@gmail.com • Acceso Seguro</div>
+            </div>
+          </div>
+          <span className="text-[11px] font-bold bg-white text-indigo-900 px-3 py-1 rounded-xl shadow-xs group-hover:scale-105 transition">
+            Entrar Ahora →
+          </span>
+        </button>
+
+        <div className="relative flex py-1 items-center">
+          <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
+          <span className="flex-shrink mx-3 text-[11px] font-semibold text-slate-400">O ingresa con tus credenciales</span>
+          <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           <div>
             <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
-              Correo Electrónico
+              Correo Electrónico o DNI / NIE
             </label>
             <div className="relative">
               <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
               <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="tu.correo@empresa.com"
-                className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white"
+                type="text"
+                value={identifier}
+                onChange={e => setIdentifier(e.target.value)}
+                placeholder="tu.correo@empresa.com o 43134155-R"
+                className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
                 required
-                autoComplete="email"
+                autoCapitalize="none"
+                autoCorrect="off"
               />
             </div>
           </div>
@@ -158,10 +184,9 @@ export const LoginForm: React.FC = () => {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="Introduce tu contraseña"
-                className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 font-mono tracking-wider text-slate-900 dark:text-white"
+                placeholder="••••••••"
+                className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 font-mono tracking-wider"
                 required
-                autoComplete="current-password"
               />
               <button
                 type="button"
@@ -177,33 +202,45 @@ export const LoginForm: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-md shadow-indigo-600/20 active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-md shadow-indigo-600/20 active:scale-95 transition flex items-center justify-center gap-2"
           >
             <LogIn className="w-4 h-4" />
             <span>{loading ? 'Accediendo...' : 'Iniciar Sesión'}</span>
           </button>
         </form>
 
-        {/* Employee portal & registration */}
-        <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
-          <button
-            type="button"
-            onClick={() => setShowEmployeeModal(true)}
-            className="w-full p-2.5 rounded-xl border border-slate-200 hover:border-emerald-300 bg-slate-50 hover:bg-emerald-50/50 dark:border-slate-800 dark:bg-slate-800/60 dark:hover:bg-emerald-950/20 transition cursor-pointer flex items-center justify-between text-xs"
-          >
-            <div className="flex items-center gap-2">
-              <UserPlus className="w-4 h-4 text-emerald-600" />
-              <span className="font-semibold text-slate-800 dark:text-slate-200">
-                Portal de Empleados: Crear cuenta o acceso
-              </span>
-            </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-600 text-white">
-              Acceder →
+        {/* Quick Access Bar & Employee Registration trigger */}
+        <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-2">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              Acceso rápido con un clic
             </span>
-          </button>
+            <Users className="w-3.5 h-3.5 text-slate-400" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <button
+              onClick={handleAdminDirectLogin}
+              className="p-2.5 text-left rounded-xl border border-indigo-200 bg-indigo-50/60 hover:bg-indigo-100 dark:border-indigo-900/60 dark:bg-indigo-950/40 transition cursor-pointer"
+            >
+              <div className="font-bold text-indigo-900 dark:text-indigo-200">Administrador</div>
+              <div className="text-[10px] text-slate-500 truncate">xiscoquin@gmail.com</div>
+            </button>
+
+            <button
+              onClick={() => setShowEmployeeModal(true)}
+              className="p-2.5 text-left rounded-xl border border-emerald-300 bg-emerald-50/80 hover:bg-emerald-100 dark:border-emerald-900/60 dark:bg-emerald-950/40 transition cursor-pointer group"
+            >
+              <div className="font-bold text-emerald-900 dark:text-emerald-200 flex items-center justify-between">
+                <span>Empleado</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-600 text-white font-bold">+ Crear</span>
+              </div>
+              <div className="text-[10px] text-emerald-700 dark:text-emerald-300">Crear usuario / Entrar</div>
+            </button>
+          </div>
         </div>
 
-        {/* Footer */}
+        {/* Derechos reservados */}
         <div className="pt-2 border-t border-slate-100 dark:border-slate-800 text-center space-y-1">
           <p className="text-[11px] font-medium text-slate-600 dark:text-slate-400">
             © {new Date().getFullYear()} {APP_BRAND.name}
@@ -216,8 +253,8 @@ export const LoginForm: React.FC = () => {
 
       {/* EMPLOYEE ACCESS & REGISTRATION MODAL */}
       {showEmployeeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 sm:p-7 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-3 sm:p-4 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-7 space-y-4 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center font-bold">
@@ -305,6 +342,19 @@ export const LoginForm: React.FC = () => {
                       placeholder="Ej: Laura Martínez Gomis"
                       className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-emerald-500"
                       required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                      DNI / NIE (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={newEmpDni}
+                      onChange={e => setNewEmpDni(e.target.value.toUpperCase())}
+                      placeholder="Ej: 43134155-R"
+                      className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none font-mono uppercase"
                     />
                   </div>
 

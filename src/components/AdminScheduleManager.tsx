@@ -20,6 +20,7 @@ import {
 import { User, WeekSchedule, ParseResult, EmployeeScheduleRow, ShiftDetail } from '../types';
 import { parseScheduleInput, getWeekDates, formatDaySpanish } from '../utils/scheduleParser';
 import { api } from '../services/api';
+import { OFFICIAL_SCHEDULE_TEXT, OFFICIAL_WEEK_SCHEDULE } from '../constants/officialSchedule';
 
 interface Props {
   employees: User[];
@@ -28,7 +29,7 @@ interface Props {
 }
 
 export const AdminScheduleManager: React.FC<Props> = ({ employees, onSchedulePublished, onRefreshEmployees }) => {
-  const [inputText, setInputText] = useState('');
+  const [inputText, setInputText] = useState(OFFICIAL_SCHEDULE_TEXT);
   const [targetWeekDate, setTargetWeekDate] = useState('2026-11-02');
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
   const [existingSchedules, setExistingSchedules] = useState<WeekSchedule[]>([]);
@@ -58,13 +59,41 @@ export const AdminScheduleManager: React.FC<Props> = ({ employees, onSchedulePub
     fetchExistingSchedules();
   }, []);
 
-  const handlePreview = () => {
+  // Automatically parse official schedule when employees list is loaded
+  useEffect(() => {
+    if (employees && employees.length > 1 && !parseResult) {
+      const res = parseScheduleInput(inputText || OFFICIAL_SCHEDULE_TEXT, employees, targetWeekDate);
+      setParseResult(res);
+    } else if (!employees || employees.length <= 1) {
+      // Auto-fetch employees from database (Firestore / API) if not provided yet
+      api.getUsers().then(list => {
+        if (list && list.length > 1) {
+          onRefreshEmployees?.();
+          const res = parseScheduleInput(inputText || OFFICIAL_SCHEDULE_TEXT, list, targetWeekDate);
+          setParseResult(res);
+        }
+      });
+    }
+  }, [employees, inputText, targetWeekDate, parseResult]);
+
+  const handlePreview = async () => {
     if (!inputText.trim()) {
       setFeedbackMsg({ text: 'Por favor, pega el texto o tabla del cuadrante', type: 'error' });
       return;
     }
 
-    const res = parseScheduleInput(inputText, employees, targetWeekDate);
+    let activeEmployees = employees;
+    if (!activeEmployees || activeEmployees.length <= 1) {
+      try {
+        const fresh = await api.getUsers();
+        if (fresh && fresh.length > 1) {
+          activeEmployees = fresh;
+          onRefreshEmployees?.();
+        }
+      } catch {}
+    }
+
+    const res = parseScheduleInput(inputText, activeEmployees, targetWeekDate);
     setParseResult(res);
     setFeedbackMsg(null);
 
@@ -202,8 +231,24 @@ export const AdminScheduleManager: React.FC<Props> = ({ employees, onSchedulePub
   };
 
   // Example templates for 1-click loading as per Section 5 & Section 13
-  const loadExample = (type: string) => {
-    if (type === 'sheets') {
+  const loadExample = async (type: string) => {
+    let activeEmployees = employees;
+    if (!activeEmployees || activeEmployees.length <= 1) {
+      try {
+        const fresh = await api.getUsers();
+        if (fresh && fresh.length > 1) {
+          activeEmployees = fresh;
+          onRefreshEmployees?.();
+        }
+      } catch {}
+    }
+
+    if (type === 'sheets' || type === 'official') {
+      setInputText(OFFICIAL_SCHEDULE_TEXT);
+      setTargetWeekDate('2026-11-02');
+      const res = parseScheduleInput(OFFICIAL_SCHEDULE_TEXT, activeEmployees, '2026-11-02');
+      setParseResult(res);
+    } else if (type === 'sheets-oct') {
       setInputText(
 `\t26/10\t27/10\t28/10\t29/10\t30/10\t31/10\t01/11
 \tLUNES\tMARTES\tMIERCOLES\tJUEVES\tVIERNES\tSABADO\tDOMINGO
@@ -251,14 +296,12 @@ Aliz Varga: Lunes: 14:00-22:00 Martes: LIBRE Miércoles: 09:00-17:00 Jueves: 09:
       );
       setTargetWeekDate('2026-12-28');
     } else if (type === 'dst') {
-      // 25 October 2026 DST shift
       setInputText(
 `SEMANA DEL 19 AL 25 DE OCTUBRE DE 2026
 Josep Vidal: Lunes: LIBRE Martes: LIBRE Miércoles: LIBRE Jueves: LIBRE Viernes: LIBRE Sábado: 22:00-06:00 Domingo: LIBRE`
       );
       setTargetWeekDate('2026-10-19');
     } else if (type === 'ambiguous') {
-      // "Francisco" is ambiguous between Francisco Gallego and Francisco Javier Segundo!
       setInputText(
 `SEMANA DEL 2 AL 8 DE NOVIEMBRE
 Francisco: Lunes: 09:00-17:00 Martes: 09:00-17:00 Miércoles: LIBRE Jueves: 14:00-22:00 Viernes: 14:00-22:00 Sábado: LIBRE Domingo: LIBRE`
@@ -286,13 +329,20 @@ Francisco: Lunes: 09:00-17:00 Martes: 09:00-17:00 Miércoles: LIBRE Jueves: 14:0
 
           {/* Quick example loader */}
           <div className="flex flex-wrap items-center gap-1.5 bg-slate-50 dark:bg-slate-800/80 p-2 rounded-xl border border-slate-200 dark:border-slate-700">
-            <span className="text-[11px] font-semibold text-slate-500 px-1">Cargar plantilla:</span>
+            <span className="text-[11px] font-semibold text-slate-500 px-1">Plantilla:</span>
             <button
-              onClick={() => loadExample('sheets')}
-              className="text-xs px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-xs flex items-center gap-1"
+              onClick={() => loadExample('official')}
+              className="text-xs px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs flex items-center gap-1.5 transition-colors"
+              title="Cuadrante oficial 02/11 al 08/11 para los 10 empleados con turnos exactos"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Google Sheets (26/10 - 01/11)</span>
+              <span>Cuadrante Oficial (02/11 - 08/11)</span>
+            </button>
+            <button
+              onClick={() => loadExample('sheets-oct')}
+              className="text-xs px-2.5 py-1 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 font-medium border border-indigo-200 dark:border-indigo-800 shadow-2xs"
+            >
+              Semana Anterior (26/10)
             </button>
             <button
               onClick={() => loadExample('ex1')}
@@ -705,3 +755,6 @@ Francisco: Lunes: 09:00-17:00 Martes: 09:00-17:00 Miércoles: LIBRE Jueves: 14:0
     </div>
   );
 };
+
+
+

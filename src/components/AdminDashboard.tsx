@@ -65,12 +65,12 @@ export const AdminDashboard: React.FC<Props> = ({ onNavigate, employees }) => {
   return (
     <div className="space-y-6">
       {/* Welcome Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-5 sm:p-8 text-white shadow-xl relative overflow-hidden">
         <div className="relative z-10 max-w-2xl">
           <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 bg-indigo-950/80 px-2.5 py-1 rounded-full border border-indigo-800">
             Panel del Administrador
           </span>
-          <h1 className="text-xl sm:text-2xl font-black mt-2 tracking-tight">
+          <h1 className="text-lg sm:text-2xl font-black mt-2 tracking-tight">
             Gestión Central de Turnos y Solicitudes
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 mt-1 leading-relaxed">
@@ -78,10 +78,10 @@ export const AdminDashboard: React.FC<Props> = ({ onNavigate, employees }) => {
             ausencias médicas con estricta privacidad e incidencias.
           </p>
 
-          <div className="flex flex-wrap items-center gap-3 mt-5">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 mt-4 sm:mt-5">
             <button
               onClick={() => onNavigate('manage-schedule')}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-bold text-xs shadow-lg shadow-indigo-600/30 transition active:scale-95"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-bold text-xs shadow-lg shadow-indigo-600/30 transition active:scale-95 min-h-[44px]"
             >
               <FileText className="w-4 h-4" />
               <span>Pegar Nuevo Cuadrante</span>
@@ -89,7 +89,7 @@ export const AdminDashboard: React.FC<Props> = ({ onNavigate, employees }) => {
 
             <button
               onClick={() => onNavigate('general-schedule')}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 font-semibold text-xs backdrop-blur-xs transition"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 font-semibold text-xs backdrop-blur-xs transition min-h-[44px]"
             >
               <Calendar className="w-4 h-4" />
               <span>Ver Cuadrante General</span>
@@ -294,3 +294,6 @@ export const AdminDashboard: React.FC<Props> = ({ onNavigate, employees }) => {
     </div>
   );
 };
+
+
+

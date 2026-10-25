@@ -1,20 +1,21 @@
-export type Role = 'admin' | 'employee';
-
 export interface User {
   id: string;
   name: string;
+  dni?: string;
   aliases: string[];
   email: string;
   phone?: string;
-  role: Role;
+  role: 'admin' | 'employee';
   status: 'active' | 'deactivated' | 'deleted';
+  position?: string;
   tempPassword?: string;
   mustChangePassword?: boolean;
-  createdAt?: string;
+  registeredAt?: string;
+  createdAt: string;
   updatedAt?: string;
 }
 
-export type ShiftType = 'work' | 'free' | 'rest' | 'sick' | 'vacation' | 'holiday';
+export type ShiftType = 'work' | 'free' | 'rest' | 'vacation' | 'sick' | 'holiday' | 'other';
 
 export interface ShiftDetail {
   type: ShiftType;
@@ -32,15 +33,15 @@ export type DayShift = ShiftDetail;
 export interface EmployeeScheduleRow {
   employeeId: string;
   employeeName: string;
+  days: Record<string, ShiftDetail>; // ISO date 'YYYY-MM-DD' -> shift
   totalHours: number;
   warnings: string[];
-  days: Record<string, ShiftDetail>;
 }
 
 export interface WeekSchedule {
   id: string;
-  weekStartDate: string;
-  weekEndDate: string;
+  weekStartDate: string; // YYYY-MM-DD (Monday)
+  weekEndDate: string; // YYYY-MM-DD (Sunday)
   weekLabel: string;
   status: 'draft' | 'published';
   version: number;
@@ -49,11 +50,28 @@ export interface WeekSchedule {
   changeReason?: string;
   rows: EmployeeScheduleRow[];
   rawInputText?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface CommentItem {
+export interface AmbiguityMatch {
+  rawName: string;
+  matchedEmployees: User[];
+}
+
+export interface ParseResult {
+  success: boolean;
+  weekStartDate: string;
+  weekEndDate: string;
+  weekLabel: string;
+  rows: EmployeeScheduleRow[];
+  warnings: string[];
+  errors: string[];
+  ambiguities: AmbiguityMatch[];
+  unknownEmployees?: string[];
+}
+
+export interface RequestComment {
   id: string;
   userId: string;
   userName: string;
@@ -72,8 +90,8 @@ export interface ShiftChangeRequest {
   coworkerId?: string;
   coworkerName?: string;
   coworkerStatus?: 'pending' | 'accepted' | 'rejected';
-  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
-  comments: CommentItem[];
+  status: 'pending' | 'approved' | 'rejected' | 'info_requested';
+  comments: RequestComment[];
   createdAt: string;
   updatedAt: string;
 }
@@ -86,8 +104,8 @@ export interface DaysOffRequest {
   startDate: string;
   endDate: string;
   comment?: string;
-  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
-  comments: CommentItem[];
+  status: 'pending' | 'approved' | 'rejected' | 'info_requested';
+  comments: RequestComment[];
   createdAt: string;
   updatedAt: string;
 }
@@ -98,12 +116,12 @@ export interface AbsenceRequest {
   employeeName: string;
   type: 'absence';
   subType: 'communication' | 'leave_request';
-  category: 'medico' | 'urgencia' | 'fuerza_mayor' | 'otro' | string;
+  category: 'medico' | 'urgencia_familiar' | 'fuerza_mayor' | 'otro';
   startDate: string;
   endDate: string;
   hasCertificate: boolean;
-  status: 'pending' | 'acknowledged' | 'approved' | 'rejected';
-  comments: CommentItem[];
+  status: 'pending' | 'acknowledged' | 'approved' | 'rejected' | 'info_requested';
+  comments: RequestComment[];
   createdAt: string;
   updatedAt: string;
 }
@@ -115,25 +133,18 @@ export interface IncidentItem {
   category: string;
   date: string;
   description: string;
-  status: 'abierta' | 'en_investigacion' | 'resuelta' | string;
-  comments: CommentItem[];
+  status: 'abierta' | 'en_revision' | 'resuelta';
+  comments: RequestComment[];
   createdAt: string;
   updatedAt: string;
 }
 
 export interface NotificationItem {
   id: string;
-  userId: string;
+  userId: string; // specific user ID, 'admin-1', or 'all'
   title: string;
   message: string;
-  type:
-    | 'schedule_published'
-    | 'schedule_modified'
-    | 'request_created'
-    | 'request_updated'
-    | 'coworker_shift_request'
-    | 'incident_updated'
-    | string;
+  type: 'schedule_published' | 'schedule_modified' | 'request_created' | 'request_updated' | 'coworker_shift_request' | 'incident_updated' | 'system';
   read: boolean;
   link?: string;
   createdAt: string;
@@ -145,7 +156,7 @@ export interface AuditLogItem {
   userId: string;
   userName: string;
   action: string;
-  entity: 'cuadrante' | 'solicitud' | 'empleado' | 'incidencia' | 'ajustes' | 'copia_seguridad' | string;
+  entity: 'cuadrante' | 'solicitud' | 'empleado' | 'incidencia' | 'ajustes' | 'copia_seguridad';
   previousValue?: string;
   newValue?: string;
   notes?: string;
@@ -162,21 +173,4 @@ export interface AppSettings {
   warningMinWeeklyRestDays: number;
   timezone: string;
   emailSenderDomain: string;
-}
-
-export interface AmbiguityItem {
-  rawName: string;
-  matchedEmployees: User[];
-}
-
-export interface ParseResult {
-  success: boolean;
-  weekStartDate: string;
-  weekEndDate: string;
-  weekLabel: string;
-  rows: EmployeeScheduleRow[];
-  errors: string[];
-  warnings: string[];
-  ambiguities: AmbiguityItem[];
-  unknownEmployees?: string[];
 }

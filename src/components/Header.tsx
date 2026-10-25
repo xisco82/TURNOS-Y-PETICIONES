@@ -11,14 +11,18 @@ import {
   ShieldCheck,
   Check,
   ExternalLink,
+  LayoutDashboard,
+  FileText,
+  Calendar,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { PWAInstallButton } from './PWAInstallButton';
+import { DatabaseSyncIndicator } from './DatabaseSyncIndicator';
 import { NotificationItem } from '../types';
 import { api } from '../services/api';
 import { APP_BRAND } from '../constants/branding';
 import { InteractiveLogo } from './InteractiveLogo';
-import { DatabaseSyncIndicator } from './DatabaseSyncIndicator';
 
 interface HeaderProps {
   activeTab: string;
@@ -90,23 +94,25 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo & Brand */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <InteractiveLogo size="md" />
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-lg text-slate-900 dark:text-white tracking-tight">{APP_BRAND.name}</span>
-                <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded-sm bg-indigo-50 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/60">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="font-bold text-sm sm:text-lg text-slate-900 dark:text-white tracking-tight truncate max-w-[125px] xs:max-w-[160px] sm:max-w-none">
+                  {APP_BRAND.name}
+                </span>
+                <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded-sm bg-indigo-50 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/60 shrink-0">
                   {isAdmin ? 'Admin' : 'Empleado'}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block truncate">
                 {APP_BRAND.subtitle}
               </p>
             </div>
           </div>
 
           {/* Quick-switch user bar & actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1 sm:gap-2 md:gap-3 shrink-0">
             <DatabaseSyncIndicator variant="badge" />
             <PWAInstallButton />
 
@@ -410,6 +416,140 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
+      {/* Mobile Bottom Navigation Bar (Optimized for Mobile/PWA touch experience) */}
+      <nav aria-label="Navegación móvil" className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 border-t border-slate-200 dark:border-slate-800 backdrop-blur-md pb-[max(env(safe-area-inset-bottom),0.35rem)] pt-1 px-2 shadow-lg">
+        <div className="flex items-center justify-around">
+          {isAdmin ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setActiveTab('dashboard')}
+                className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl text-[10px] font-semibold transition min-w-[54px] min-h-[44px] ${
+                  activeTab === 'dashboard'
+                    ? 'text-indigo-600 dark:text-indigo-400 font-bold'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                <LayoutDashboard className="w-5 h-5 mb-0.5" />
+                <span>Panel</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('manage-schedule')}
+                className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl text-[10px] font-semibold transition min-w-[54px] min-h-[44px] ${
+                  activeTab === 'manage-schedule'
+                    ? 'text-indigo-600 dark:text-indigo-400 font-bold'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                <FileText className="w-5 h-5 mb-0.5" />
+                <span>Cuadrante</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('requests')}
+                className={`relative flex flex-col items-center justify-center py-1 px-2 rounded-xl text-[10px] font-semibold transition min-w-[54px] min-h-[44px] ${
+                  activeTab === 'requests'
+                    ? 'text-indigo-600 dark:text-indigo-400 font-bold'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                <ArrowLeftRight className="w-5 h-5 mb-0.5" />
+                <span>Peticiones</span>
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-2 w-2 h-2 rounded-full bg-rose-500" />
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('employees')}
+                className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl text-[10px] font-semibold transition min-w-[54px] min-h-[44px] ${
+                  activeTab === 'employees'
+                    ? 'text-indigo-600 dark:text-indigo-400 font-bold'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                <Users className="w-5 h-5 mb-0.5" />
+                <span>Personal</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('audit')}
+                className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl text-[10px] font-semibold transition min-w-[54px] min-h-[44px] ${
+                  activeTab === 'audit'
+                    ? 'text-indigo-600 dark:text-indigo-400 font-bold'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                <ShieldCheck className="w-5 h-5 mb-0.5" />
+                <span>Copias</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => setActiveTab('my-schedule')}
+                className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[10px] font-semibold transition min-w-[64px] min-h-[44px] ${
+                  activeTab === 'my-schedule'
+                    ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                <CalendarDays className="w-5 h-5 mb-0.5" />
+                <span>Mi Turno</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('general-schedule')}
+                className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[10px] font-semibold transition min-w-[64px] min-h-[44px] ${
+                  activeTab === 'general-schedule'
+                    ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                <Users className="w-5 h-5 mb-0.5" />
+                <span>General</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('requests')}
+                className={`relative flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[10px] font-semibold transition min-w-[64px] min-h-[44px] ${
+                  activeTab === 'requests'
+                    ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                <ArrowLeftRight className="w-5 h-5 mb-0.5" />
+                <span>Peticiones</span>
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-3 w-2 h-2 rounded-full bg-rose-500" />
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('my-profile')}
+                className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[10px] font-semibold transition min-w-[64px] min-h-[44px] ${
+                  activeTab === 'my-profile'
+                    ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                <UserIcon className="w-5 h-5 mb-0.5" />
+                <span>Mi Perfil</span>
+              </button>
+            </>
+          )}
+        </div>
+      </nav>
+
       {/* Password Change Modal */}
       {showPasswordModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
@@ -461,3 +601,6 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+
+
+

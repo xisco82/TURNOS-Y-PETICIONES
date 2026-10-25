@@ -1,12 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../types';
-import { api, getStoredToken, setStoredToken } from '../services/api';
+import { api } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
-  quickUsers: User[];
   loading: boolean;
-  login: (email: string, pass: string) => Promise<void>;
+  quickUsers: User[];
+  login: (identifier: string, password: string) => Promise<void>;
   logout: () => void;
   switchUser: (targetUser: User) => void;
   refreshUser: () => Promise<void>;
@@ -16,15 +16,17 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [quickUsers, setQuickUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [quickUsers, setQuickUsers] = useState<User[]>([]);
 
   const fetchQuickUsers = async () => {
     try {
-      const list = await api.getQuickUsers();
-      setQuickUsers(list);
+      const users = await api.getQuickUsers();
+      setQuickUsers(users);
+      return users;
     } catch (e) {
       console.error('Error fetching quick users:', e);
+      return [];
     }
   };
 
@@ -32,16 +34,37 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLoading(true);
     try {
       await fetchQuickUsers();
-      const token = getStoredToken();
+      const token = api.getToken();
       if (token) {
         try {
           const res = await api.getMe();
-          setUser(res.user);
+          if (res?.user) {
+            setUser(res.user);
+          } else {
+            const cached = api.getCurrentCachedUser();
+            if (cached) {
+              setUser(cached);
+            } else {
+              api.setToken(null);
+              setUser(null);
+            }
+          }
         } catch {
-          setStoredToken(null);
-          setUser(null);
+          const cached = api.getCurrentCachedUser();
+          if (cached) {
+            setUser(cached);
+          } else {
+            api.setToken(null);
+            setUser(null);
+          }
         }
+      } else {
+        // No saved session: let the user log in
+        setUser(null);
       }
+    } catch (e) {
+      console.error('Init auth error:', e);
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -51,38 +74,45 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     initAuth();
   }, []);
 
-  const login = async (email: string, pass: string) => {
-    const res = await api.login(email, pass);
+  const login = async (identifier: string, password: string) => {
+    const res = await api.login(identifier, password);
     setUser(res.user);
     await fetchQuickUsers();
   };
 
   const logout = () => {
-    setStoredToken(null);
+    api.setToken(null);
     setUser(null);
   };
 
   const switchUser = (targetUser: User) => {
-    setStoredToken(targetUser.id);
+    api.setToken(targetUser.id);
+    try {
+      localStorage.setItem('hm_gran_fiesta_user', JSON.stringify(targetUser));
+    } catch {}
     setUser(targetUser);
   };
 
   const refreshUser = async () => {
     try {
       const res = await api.getMe();
-      setUser(res.user);
-    } catch {
-      // ignore
+      if (res?.user) {
+        setUser(res.user);
+        try {
+          localStorage.setItem('hm_gran_fiesta_user', JSON.stringify(res.user));
+        } catch {}
+      }
+    } catch (e) {
+      console.error('Refresh user error:', e);
     }
-    await fetchQuickUsers();
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        quickUsers,
         loading,
+        quickUsers,
         login,
         logout,
         switchUser,

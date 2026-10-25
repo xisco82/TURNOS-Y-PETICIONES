@@ -2,23 +2,23 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { LogoViewerModal } from '../components/LogoViewerModal';
 
 interface LogoModalContextType {
-  isLogoModalOpen: boolean;
   openLogoModal: () => void;
   closeLogoModal: () => void;
+  isLogoModalOpen: boolean;
 }
 
 const LogoModalContext = createContext<LogoModalContextType | undefined>(undefined);
 
 export const LogoModalProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [isLogoModalOpen, setIsLogoModalOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
-  const openLogoModal = () => setIsLogoModalOpen(true);
-  const closeLogoModal = () => setIsLogoModalOpen(false);
+  const openLogoModal = () => setIsOpen(true);
+  const closeLogoModal = () => setIsOpen(false);
 
   return (
-    <LogoModalContext.Provider value={{ isLogoModalOpen, openLogoModal, closeLogoModal }}>
+    <LogoModalContext.Provider value={{ openLogoModal, closeLogoModal, isLogoModalOpen: isOpen }}>
       {children}
-      <LogoViewerModal isOpen={isLogoModalOpen} onClose={closeLogoModal} />
+      <LogoViewerModal isOpen={isOpen} onClose={closeLogoModal} />
     </LogoModalContext.Provider>
   );
 };

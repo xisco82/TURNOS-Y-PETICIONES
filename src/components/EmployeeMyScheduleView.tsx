@@ -121,17 +121,17 @@ export const EmployeeMyScheduleView: React.FC = () => {
       </div>
 
       {/* Overview Stat Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs">
-          <span className="text-xs text-slate-500 font-medium">Total Horas Semanales</span>
-          <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">
-            {myRow ? myRow.totalHours : 0} <span className="text-xs font-normal text-slate-400">horas</span>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-3 sm:p-4 border border-slate-200 dark:border-slate-800 shadow-xs">
+          <span className="text-[11px] sm:text-xs text-slate-500 font-medium">Total Horas</span>
+          <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">
+            {myRow ? myRow.totalHours : 0} <span className="text-xs font-normal text-slate-400">h</span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs">
-          <span className="text-xs text-slate-500 font-medium">Días de Descanso</span>
-          <div className="text-2xl font-black text-emerald-600 mt-1">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-3 sm:p-4 border border-slate-200 dark:border-slate-800 shadow-xs">
+          <span className="text-[11px] sm:text-xs text-slate-500 font-medium">Días Descanso</span>
+          <div className="text-xl sm:text-2xl font-black text-emerald-600 mt-1">
             {myRow
               ? Object.values(myRow.days).filter(d => d.type === 'free' || d.type === 'rest').length
               : 0}
@@ -139,9 +139,9 @@ export const EmployeeMyScheduleView: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs">
-          <span className="text-xs text-slate-500 font-medium">Días Trabajados</span>
-          <div className="text-2xl font-black text-indigo-600 mt-1">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-3 sm:p-4 border border-slate-200 dark:border-slate-800 shadow-xs">
+          <span className="text-[11px] sm:text-xs text-slate-500 font-medium">Días Trabajados</span>
+          <div className="text-xl sm:text-2xl font-black text-indigo-600 mt-1">
             {myRow
               ? Object.values(myRow.days).filter(d => d.type === 'work').length
               : 0}
@@ -149,11 +149,11 @@ export const EmployeeMyScheduleView: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs">
-          <span className="text-xs text-slate-500 font-medium">Zona Horaria Oficial</span>
-          <div className="text-sm font-bold text-slate-900 dark:text-white mt-2 flex items-center gap-1.5">
-            <Clock className="w-4 h-4 text-slate-400" />
-            <span>Europe/Madrid</span>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-3 sm:p-4 border border-slate-200 dark:border-slate-800 shadow-xs">
+          <span className="text-[11px] sm:text-xs text-slate-500 font-medium">Zona Horaria</span>
+          <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white mt-2 flex items-center gap-1.5 truncate">
+            <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <span className="truncate">Europe/Madrid</span>
           </div>
         </div>
       </div>
@@ -172,9 +172,13 @@ export const EmployeeMyScheduleView: React.FC = () => {
             const isVacation = shift?.type === 'vacation' || shift?.rawText?.toUpperCase() === 'V';
             const isWork = shift?.type === 'work' && !isSick && !isVacation;
             const isFree = (shift?.type === 'free' || shift?.type === 'rest' || shift?.rawText?.toUpperCase() === 'L') && !isSick && !isVacation;
+            const todayStr = new Date().toISOString().split('T')[0];
+            const isToday = dateStr === todayStr;
 
             let cardBg = 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800';
-            if (isSick) {
+            if (isToday) {
+              cardBg = 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-500 dark:border-indigo-500 ring-2 ring-indigo-400 shadow-md';
+            } else if (isSick) {
               cardBg = 'bg-rose-50/60 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900/60';
             } else if (isVacation) {
               cardBg = 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900/60';
@@ -190,7 +194,14 @@ export const EmployeeMyScheduleView: React.FC = () => {
                 className={`rounded-2xl p-4 border transition ${cardBg}`}
               >
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-                  <span className="font-bold text-sm text-slate-900 dark:text-white">{info.dayName}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-sm text-slate-900 dark:text-white">{info.dayName}</span>
+                    {isToday && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-indigo-600 text-white">
+                        HOY
+                      </span>
+                    )}
+                  </div>
                   <span className="text-xs text-slate-400">
                     {info.dayNumber} {info.monthName.slice(0, 3)}
                   </span>
@@ -250,3 +261,6 @@ export const EmployeeMyScheduleView: React.FC = () => {
     </div>
   );
 };
+
+
+

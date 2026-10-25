@@ -138,3 +138,6 @@ export const CompulsoryPasswordChangeModal: React.FC<Props> = ({ user, onSuccess
     </div>
   );
 };
+
+
+
