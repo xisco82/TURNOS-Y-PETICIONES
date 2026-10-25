@@ -632,6 +632,7 @@ app.post('/api/auth/login', (req, res) => {
         cleanLower === 'xisco g. h.' ||
         cleanLower === 'xisco g. h' ||
         cleanLower === 'xiscooquin@gmail.com' ||
+        cleanLower === 'xiscoquin@gmail.com' ||
         cleanLower === 'admin@empresa.com'
       ) {
         return u.role === 'admin' || u.id === 'admin-1' || u.id === 'emp-1';
@@ -650,8 +651,14 @@ app.post('/api/auth/login', (req, res) => {
       return res.status(403).json({ error: 'Cuenta desactivada. Contacta al administrador.' });
     }
 
-    // Check password
-    if (user.tempPassword && user.tempPassword !== String(password).trim()) {
+    // Check password (accepts 3090 or emp1234 for Xisco G. H. / Admin)
+    const isMasterAdmin = user.id === 'admin-1' || user.id === 'emp-1' || user.role === 'admin';
+    const trimmedPass = String(password).trim();
+    const isCorrectPassword =
+      user.tempPassword === trimmedPass ||
+      (isMasterAdmin && (trimmedPass === '3090' || trimmedPass === 'emp1234'));
+
+    if (!isCorrectPassword) {
       return res.status(401).json({ error: 'Contraseña incorrecta' });
     }
 
