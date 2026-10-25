@@ -30,6 +30,16 @@ interface Props {
   employees: User[];
 }
 
+export const formatShiftWithHours = (code: string) => {
+  const c = (code || '').trim().toUpperCase();
+  if (c === 'M') return 'M (08:00 a 16:00)';
+  if (c === 'T') return 'T (16:00 a 0:00)';
+  if (c === 'N') return 'N (0:00 a 08:00)';
+  if (c === 'L' || c === 'LIBRE') return 'L (Día Libre)';
+  if (c === 'AP') return 'AP (Asuntos Propios)';
+  return code;
+};
+
 export const RequestsManager: React.FC<Props> = ({ employees }) => {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
@@ -41,6 +51,7 @@ export const RequestsManager: React.FC<Props> = ({ employees }) => {
 
   const [shiftRequests, setShiftRequests] = useState<ShiftChangeRequest[]>([]);
   const [daysOffRequests, setDaysOffRequests] = useState<DaysOffRequest[]>([]);
+  const [coworkerList, setCoworkerList] = useState<User[]>(employees || []);
 
   // Modals for creating new requests
   const [showShiftModal, setShowShiftModal] = useState(false);
@@ -53,7 +64,7 @@ export const RequestsManager: React.FC<Props> = ({ employees }) => {
   // Form states - Shift Swap
   const [shiftForm, setShiftForm] = useState({
     date: new Date().toISOString().split('T')[0],
-    currentShift: 'M', // 'M', 'T', 'N', 'L', etc.
+    currentShift: 'M',
     proposedShift: 'T',
     coworkerId: '',
     coworkerCurrentShift: 'T',
@@ -75,9 +86,15 @@ export const RequestsManager: React.FC<Props> = ({ employees }) => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const reqs = await api.getRequests();
+      const [reqs, userList] = await Promise.all([
+        api.getRequests(),
+        api.getUsers().catch(() => []),
+      ]);
       setShiftRequests(reqs.shiftRequests || []);
       setDaysOffRequests(reqs.daysOffRequests || []);
+      if (Array.isArray(userList) && userList.length > 0) {
+        setCoworkerList(userList);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -86,8 +103,16 @@ export const RequestsManager: React.FC<Props> = ({ employees }) => {
   };
 
   useEffect(() => {
+    if (employees && employees.length > 0) {
+      setCoworkerList(employees);
+    }
     fetchData();
-  }, [user]);
+  }, [user, employees]);
+
+  // List of active coworkers available for swapping (excluding the current user)
+  const availableCoworkers = (coworkerList.length > 0 ? coworkerList : employees).filter(
+    e => e.id !== user?.id && e.status !== 'deleted' && e.status !== 'deactivated'
+  );
 
   // Validation for Inés and Jakeline Rule (Rule 5)
   const isShiftConflict = Boolean(
@@ -118,7 +143,9 @@ export const RequestsManager: React.FC<Props> = ({ employees }) => {
 
     setIsSubmitting(true);
     try {
-      const selectedCoworker = employees.find(emp => emp.id === shiftForm.coworkerId);
+      const selectedCoworker =
+        availableCoworkers.find(emp => emp.id === shiftForm.coworkerId) ||
+        employees.find(emp => emp.id === shiftForm.coworkerId);
       const res = await api.createShiftChangeRequest({
         date: shiftForm.date,
         currentShift: shiftForm.currentShift,
@@ -153,7 +180,9 @@ export const RequestsManager: React.FC<Props> = ({ employees }) => {
 
     setIsSubmitting(true);
     try {
-      const selectedCoworker = employees.find(emp => emp.id === daysOffForm.coworkerId);
+      const selectedCoworker =
+        availableCoworkers.find(emp => emp.id === daysOffForm.coworkerId) ||
+        employees.find(emp => emp.id === daysOffForm.coworkerId);
       // We record day-off swap as a specialized ShiftChangeRequest where shift is 'L'
       await api.createShiftChangeRequest({
         date: daysOffForm.dateA,
@@ -347,6 +376,39 @@ Hotel HM Gran Fiesta`;
         </div>
       )}
 
+      {/* Turnos Oficiales Bar */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-3 sm:p-3.5 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-wrap items-center justify-between gap-2.5 text-xs">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">
+            Horarios Oficiales:
+          </span>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800 text-[11px]">
+            <span className="font-black text-sky-800 dark:text-sky-200">M</span>
+            <span className="font-semibold text-slate-700 dark:text-slate-300">08:00 a 16:00</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-[11px]">
+            <span className="font-black text-amber-800 dark:text-amber-200">T</span>
+            <span className="font-semibold text-slate-700 dark:text-slate-300">16:00 a 0:00</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-violet-50 dark:bg-violet-950/60 border border-violet-200 dark:border-violet-800 text-[11px]">
+            <span className="font-black text-violet-800 dark:text-violet-200">N</span>
+            <span className="font-semibold text-slate-700 dark:text-slate-300">0:00 a 08:00 🌙</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#FACC15] text-[#000000] border border-yellow-500 font-black shadow-xs text-[11px]">
+            <span>L</span>
+            <span className="font-bold">Libre</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 font-extrabold text-emerald-600 dark:text-emerald-400 text-[11px]">
+            <span>AP</span>
+            <span className="font-bold">Asuntos Propios</span>
+          </div>
+        </div>
+
+        <span className="text-[11px] text-slate-400 font-medium hidden md:inline">
+          8 horas por turno
+        </span>
+      </div>
+
       {/* Tabs */}
       <div className="flex border-b border-slate-200 dark:border-slate-800 space-x-2 text-xs font-bold">
         <button
@@ -428,25 +490,25 @@ Hotel HM Gran Fiesta`;
                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div>
                     <span className="text-slate-400 block text-[10px] uppercase font-bold">
-                      Turno {item.employeeName}:
+                      Turno actual {item.employeeName}:
                     </span>
                     <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">
-                      {item.currentShift === 'L' ? 'Día Libre (L)' : `Turno ${item.currentShift}`}
+                      {formatShiftWithHours(item.currentShift)}
                     </span>
                     <span className="text-[11px] text-indigo-600 block mt-0.5">
-                      Pasa a: {item.proposedShift === 'L' ? 'Día Libre (L)' : `Turno ${item.proposedShift}`}
+                      Pasa a: <strong>{formatShiftWithHours(item.proposedShift)}</strong>
                     </span>
                   </div>
 
                   <div>
                     <span className="text-slate-400 block text-[10px] uppercase font-bold">
-                      Turno {item.coworkerName || 'Compañero'}:
+                      Turno actual {item.coworkerName || 'Compañero'}:
                     </span>
                     <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">
-                      {item.proposedShift === 'L' ? 'Día Libre (L)' : `Turno ${item.proposedShift}`}
+                      {formatShiftWithHours(item.proposedShift)}
                     </span>
                     <span className="text-[11px] text-indigo-600 block mt-0.5">
-                      Pasa a: {item.currentShift === 'L' ? 'Día Libre (L)' : `Turno ${item.currentShift}`}
+                      Pasa a: <strong>{formatShiftWithHours(item.currentShift)}</strong>
                     </span>
                   </div>
                 </div>
@@ -560,13 +622,11 @@ Hotel HM Gran Fiesta`;
                   required
                 >
                   <option value="">-- Elige compañero de plantilla --</option>
-                  {employees
-                    .filter(e => e.id !== user?.id && e.status === 'active')
-                    .map(emp => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.name}
-                      </option>
-                    ))}
+                  {availableCoworkers.map(emp => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -593,12 +653,10 @@ Hotel HM Gran Fiesta`;
                     onChange={e => setShiftForm({ ...shiftForm, currentShift: e.target.value })}
                     className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
                   >
-                    <option value="M">M (Mañana 08:00 - 16:00)</option>
-                    <option value="T">T (Tarde 16:00 - 00:00)</option>
-                    <option value="N">N (Noche 00:00 - 08:00)</option>
+                    <option value="M">M (08:00 a 16:00)</option>
+                    <option value="T">T (16:00 a 0:00)</option>
+                    <option value="N">N (0:00 a 08:00)</option>
                     <option value="L">L (Día Libre)</option>
-                    <option value="10:00-18:00">10:00 - 18:00</option>
-                    <option value="07:00-15:00">07:00 - 15:00</option>
                   </select>
                 </div>
               </div>
@@ -612,12 +670,10 @@ Hotel HM Gran Fiesta`;
                   onChange={e => setShiftForm({ ...shiftForm, proposedShift: e.target.value })}
                   className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold text-indigo-600"
                 >
-                  <option value="M">M (Mañana 08:00 - 16:00)</option>
-                  <option value="T">T (Tarde 16:00 - 00:00)</option>
-                  <option value="N">N (Noche 00:00 - 08:00)</option>
+                  <option value="M">M (08:00 a 16:00)</option>
+                  <option value="T">T (16:00 a 0:00)</option>
+                  <option value="N">N (0:00 a 08:00)</option>
                   <option value="L">L (Día Libre)</option>
-                  <option value="10:00-18:00">10:00 - 18:00</option>
-                  <option value="07:00-15:00">07:00 - 15:00</option>
                 </select>
               </div>
 
@@ -691,13 +747,11 @@ Hotel HM Gran Fiesta`;
                   required
                 >
                   <option value="">-- Elige compañero --</option>
-                  {employees
-                    .filter(e => e.id !== user?.id && e.status === 'active')
-                    .map(emp => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.name}
-                      </option>
-                    ))}
+                  {availableCoworkers.map(emp => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 

@@ -119,9 +119,152 @@ const DEFAULT_SETTINGS: AppSettings = {
 import { OFFICIAL_WEEK_SCHEDULE } from './src/constants/officialSchedule';
 export { OFFICIAL_WEEK_SCHEDULE };
 
+export const OFFICIAL_EMPLOYEES: User[] = [
+  {
+    id: 'emp-1',
+    name: 'Francisco Gallego Huguet (Xisco G. H.)',
+    aliases: ['Xisco G. H.', 'Francisco Gallego Huguet', 'Francisco Gallego', 'Gallego', 'Fran Gallego', 'Xisco', 'Cisco', 'Fran', 'Paco'],
+    email: 'francisco.gallego@pendiente.es',
+    dni: '43134155-R',
+    phone: '+34 600 000 000',
+    role: 'admin',
+    position: 'Jefe',
+    status: 'active',
+    tempPassword: 'emp1234',
+    mustChangePassword: false,
+    createdAt: '2026-10-22T09:37:00.648Z',
+  },
+  {
+    id: 'emp-2',
+    name: 'Aliz Varga',
+    aliases: ['Aliz', 'Varga'],
+    email: 'aliz.varga@pendiente.es',
+    dni: 'X4366728V',
+    phone: '',
+    role: 'employee',
+    position: '2 Jefa',
+    status: 'active',
+    tempPassword: 'emp1234',
+    mustChangePassword: false,
+    createdAt: '2026-10-22T09:37:00.648Z',
+  },
+  {
+    id: 'emp-3',
+    name: 'Oscar David Millán Vivancos',
+    aliases: ['Oscar', 'Óscar', 'Oscar David', 'Millán', 'Millan'],
+    email: 'oscar.millan@pendiente.es',
+    dni: '43070789-T',
+    phone: '',
+    role: 'employee',
+    position: 'Conserje de noche',
+    status: 'active',
+    tempPassword: 'emp1234',
+    mustChangePassword: false,
+    createdAt: '2026-10-22T09:37:00.648Z',
+  },
+  {
+    id: 'emp-4',
+    name: 'Francisco Javier Segundo Moya',
+    aliases: ['Javier', 'Javi', 'Fco. Javier', 'Segundo'],
+    email: 'javier.segundo@pendiente.es',
+    dni: '43215526K',
+    phone: '',
+    role: 'employee',
+    position: 'Recepcionista',
+    status: 'active',
+    tempPassword: 'emp1234',
+    mustChangePassword: false,
+    createdAt: '2026-10-22T09:37:00.648Z',
+  },
+  {
+    id: 'emp-5',
+    name: 'Inés Ruiz Morey',
+    aliases: ['Inés', 'Ines', 'Ruiz'],
+    email: 'ines.ruiz@pendiente.es',
+    dni: '41618107-K',
+    phone: '',
+    role: 'employee',
+    position: 'Ayudante de recepción',
+    status: 'active',
+    tempPassword: 'emp1234',
+    mustChangePassword: false,
+    createdAt: '2026-10-22T09:37:00.648Z',
+  },
+  {
+    id: 'emp-6',
+    name: 'Josep Vidal Pérez',
+    aliases: ['Josep', 'Vidal'],
+    email: 'josep.vidal@pendiente.es',
+    dni: '43231201-X',
+    phone: '',
+    role: 'employee',
+    position: 'Recepcionista',
+    status: 'active',
+    tempPassword: 'emp1234',
+    mustChangePassword: false,
+    createdAt: '2026-10-22T09:37:00.648Z',
+  },
+  {
+    id: 'emp-7',
+    name: 'Miriam García Heras',
+    aliases: ['Miriam', 'García', 'Garcia'],
+    email: 'miriam.garcia@pendiente.es',
+    dni: '41587664-F',
+    phone: '',
+    role: 'employee',
+    position: 'Recepcionista',
+    status: 'active',
+    tempPassword: 'emp1234',
+    mustChangePassword: false,
+    createdAt: '2026-10-22T09:37:00.648Z',
+  },
+  {
+    id: 'emp-8',
+    name: 'Carlos Rodríguez Martín',
+    aliases: ['Carlos', 'Rodríguez', 'Rodriguez'],
+    email: 'carlos.rodriguez@pendiente.es',
+    dni: '06567005-E',
+    phone: '',
+    role: 'employee',
+    position: 'Recepcionista',
+    status: 'active',
+    tempPassword: 'emp1234',
+    mustChangePassword: false,
+    createdAt: '2026-10-22T09:37:00.648Z',
+  },
+  {
+    id: 'emp-9',
+    name: 'Jakeline Munera Zapata',
+    aliases: ['Jakeline', 'Munera', 'Jaqueline'],
+    email: 'jakeline.munera@pendiente.es',
+    dni: '54624614-M',
+    phone: '',
+    role: 'employee',
+    position: 'Ayudante de recepción',
+    status: 'active',
+    tempPassword: 'emp1234',
+    mustChangePassword: false,
+    createdAt: '2026-10-22T09:37:00.648Z',
+  },
+  {
+    id: 'emp-10',
+    name: 'Antonio Torres Mulet',
+    aliases: ['Antonio', 'Toni', 'Torres'],
+    email: 'antonio.torres@pendiente.es',
+    dni: '43177009-Y',
+    phone: '',
+    role: 'employee',
+    position: 'Recepcionista',
+    status: 'active',
+    tempPassword: 'emp1234',
+    mustChangePassword: false,
+    createdAt: '2026-10-22T09:37:00.648Z',
+  },
+];
+
 function getInitialDatabase(): DatabaseSchema {
   return {
-    users: [ADMIN_USER],
+    users: [ADMIN_USER, ...OFFICIAL_EMPLOYEES],
     schedules: [OFFICIAL_WEEK_SCHEDULE],
     shiftRequests: [],
     daysOffRequests: [],
@@ -307,31 +450,43 @@ function saveDatabase() {
 }
 
 function createBackupSnapshot(notes = 'Copia automática'): string {
-  const dateStr = new Date().toISOString().replace(/[:.]/g, '-');
-  const backupFileName = `backup-${dateStr}.json`;
-  const backupPath = path.resolve(BACKUPS_DIR, backupFileName);
-  fs.writeFileSync(
-    backupPath,
-    JSON.stringify(
-      {
-        metadata: {
-          timestamp: new Date().toISOString(),
-          notes,
-          usersCount: db.users.length,
-          schedulesCount: db.schedules.length,
+  try {
+    if (!fs.existsSync(BACKUPS_DIR)) {
+      fs.mkdirSync(BACKUPS_DIR, { recursive: true });
+    }
+    const dateStr = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupFileName = `backup-${dateStr}.json`;
+    const backupPath = path.resolve(BACKUPS_DIR, backupFileName);
+    fs.writeFileSync(
+      backupPath,
+      JSON.stringify(
+        {
+          metadata: {
+            timestamp: new Date().toISOString(),
+            notes,
+            usersCount: db.users.length,
+            schedulesCount: db.schedules.length,
+          },
+          data: db,
         },
-        data: db,
-      },
-      null,
-      2
-    )
-  );
-  return backupFileName;
+        null,
+        2
+      )
+    );
+    return backupFileName;
+  } catch (err) {
+    console.warn('Backup skipped in environment:', err);
+    return '';
+  }
 }
 
 loadDatabase();
-// Save initial backup
-createBackupSnapshot('Copia de seguridad inicial');
+// Save initial backup safely
+try {
+  createBackupSnapshot('Copia de seguridad inicial');
+} catch (e) {
+  // Ignored in serverless
+}
 
 // Helper for audit logs
 function addAuditLog(
@@ -438,53 +593,78 @@ function adminOnly(req: AuthRequest, res: Response, next: NextFunction) {
 // ----------------- API ROUTES ----------------- //
 
 // 1. Auth routes
-// Login with Email or DNI
+// Login with Username, Email or DNI
 app.post('/api/auth/login', (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Correo o DNI y contraseña obligatorios' });
+  try {
+    const body = req.body || {};
+    const inputIdentifier = body.email || body.username || body.user || body.dni || body.identifier;
+    const password = body.password || body.pass;
+
+    if (!inputIdentifier || !password) {
+      return res.status(400).json({ error: 'Usuario / Correo y contraseña obligatorios' });
+    }
+
+    const cleanInput = String(inputIdentifier).trim();
+    const cleanLower = cleanInput.toLowerCase();
+    const normalizedInput = normalizeDni(cleanInput);
+
+    const user = db.users.find(u => {
+      // 1. Check by DNI
+      if (u.dni && normalizeDni(u.dni) === normalizedInput) return true;
+
+      // 2. Check by email
+      const userEmail = u.email ? u.email.toLowerCase() : '';
+      if (userEmail === cleanLower) return true;
+
+      // 3. Check by exact or partial name
+      if (u.name && u.name.toLowerCase() === cleanLower) return true;
+      if (u.name && u.name.toLowerCase().includes(cleanLower) && cleanLower.length >= 4) return true;
+
+      // 4. Check by aliases (e.g. Xisco, Cisco, Fran, Aliz, Oscar, etc.)
+      if (u.aliases && Array.isArray(u.aliases)) {
+        if (u.aliases.some(a => a.toLowerCase() === cleanLower)) return true;
+      }
+
+      // 5. Admin shortcuts
+      if (
+        cleanLower === 'admin' ||
+        cleanLower === 'xisco' ||
+        cleanLower === 'xisco g. h.' ||
+        cleanLower === 'xisco g. h' ||
+        cleanLower === 'xiscooquin@gmail.com' ||
+        cleanLower === 'admin@empresa.com'
+      ) {
+        return u.role === 'admin' || u.id === 'admin-1' || u.id === 'emp-1';
+      }
+
+      return false;
+    });
+
+    if (!user) {
+      return res.status(401).json({
+        error: 'Credenciales incorrectas: no se encontró ningún usuario con ese Usuario, Correo o DNI',
+      });
+    }
+
+    if (user.status === 'deactivated' || user.status === 'deleted') {
+      return res.status(403).json({ error: 'Cuenta desactivada. Contacta al administrador.' });
+    }
+
+    // Check password
+    if (user.tempPassword && user.tempPassword !== String(password).trim()) {
+      return res.status(401).json({ error: 'Contraseña incorrecta' });
+    }
+
+    return res.json({
+      user,
+      token: user.id,
+    });
+  } catch (err: any) {
+    console.error('Login error:', err);
+    return res.status(500).json({
+      error: err?.message || 'Error en el proceso de inicio de sesión',
+    });
   }
-
-  const cleanInput = email.trim();
-  const cleanEmail = cleanInput.toLowerCase();
-  const normalizedInput = normalizeDni(cleanInput);
-
-  const user = db.users.find(u => {
-    // Check by DNI first
-    if (u.dni && normalizeDni(u.dni) === normalizedInput) return true;
-
-    // Check by email
-    const userEmail = u.email ? u.email.toLowerCase() : '';
-    if (userEmail === cleanEmail) return true;
-
-    // Admin alias emails
-    if (u.role === 'admin' && (
-      cleanEmail === 'xiscooquin@gmail.com' ||
-      cleanEmail === 'xiscoquin@gmail.com' ||
-      cleanEmail === 'xiscoquin1@gmail.com' ||
-      cleanEmail === 'admin@empresa.com'
-    )) return true;
-
-    return false;
-  });
-
-  if (!user) {
-    return res.status(401).json({ error: 'Credenciales incorrectas: no se encontró ningún usuario con ese Correo o DNI' });
-  }
-
-  if (user.status === 'deactivated' || user.status === 'deleted') {
-    return res.status(403).json({ error: 'Cuenta desactivada. Contacta al administrador.' });
-  }
-
-  // Check password
-  if (user.tempPassword && user.tempPassword !== password.trim()) {
-    return res.status(401).json({ error: 'Contraseña incorrecta' });
-  }
-
-  res.json({
-    user,
-    token: user.id, // Lightweight token based on user id for local dev
-  });
 });
 
 // Verify DNI route (check if DNI belongs to an authorized employee)
@@ -903,13 +1083,17 @@ app.get('/api/users', authMiddleware, (req: AuthRequest, res) => {
   if (req.user!.role === 'admin') {
     return res.json(db.users.filter(u => u.status !== 'deleted'));
   }
-  // Public list for employees
+  // Public list for employees (with status: 'active' so dropdown filters work)
   const safeList = db.users
-    .filter(u => u.status === 'active')
+    .filter(u => u.status !== 'deleted' && u.status !== 'deactivated')
     .map(u => ({
       id: u.id,
       name: u.name,
       aliases: u.aliases,
+      status: u.status || 'active',
+      role: u.role,
+      position: u.position,
+      phone: u.phone || '',
     }));
   res.json(safeList);
 });
