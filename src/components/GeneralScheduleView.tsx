@@ -228,19 +228,52 @@ export const GeneralScheduleView: React.FC = () => {
         </div>
       )}
 
+      {/* Turnos Oficiales Bar */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-3 sm:p-3.5 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-wrap items-center justify-between gap-2.5 text-xs">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">
+            Horarios Oficiales:
+          </span>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800 text-[11px]">
+            <span className="font-black text-sky-800 dark:text-sky-200">M</span>
+            <span className="font-semibold text-slate-700 dark:text-slate-300">08:00 a 16:00</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-[11px]">
+            <span className="font-black text-amber-800 dark:text-amber-200">T</span>
+            <span className="font-semibold text-slate-700 dark:text-slate-300">16:00 a 0:00</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-violet-50 dark:bg-violet-950/60 border border-violet-200 dark:border-violet-800 text-[11px]">
+            <span className="font-black text-violet-800 dark:text-violet-200">N</span>
+            <span className="font-semibold text-slate-700 dark:text-slate-300">0:00 a 08:00 🌙</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#FACC15] text-[#000000] border border-yellow-500 font-black shadow-xs text-[11px]">
+            <span>L</span>
+            <span className="font-bold">Libre</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 font-extrabold text-emerald-600 dark:text-emerald-400 text-[11px]">
+            <span>AP</span>
+            <span className="font-bold">Asuntos Propios</span>
+          </div>
+        </div>
+
+        <span className="text-[11px] text-slate-400 font-medium hidden md:inline">
+          8 horas por turno de trabajo
+        </span>
+      </div>
+
       {/* Grid Table */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto touch-pan-x">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-100/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-800">
-                <th className="py-3 px-4 font-bold sticky left-0 bg-slate-100/90 dark:bg-slate-800 z-10 min-w-[180px]">
+                <th className="py-2.5 sm:py-3 px-3 sm:px-4 font-bold sticky left-0 bg-slate-100/95 dark:bg-slate-800 z-10 min-w-[130px] sm:min-w-[170px] border-r border-slate-200 dark:border-slate-700">
                   Empleado
                 </th>
                 {weekDates.map(dateStr => {
                   const info = formatDaySpanish(dateStr);
                   return (
-                    <th key={dateStr} className="py-3 px-3 font-semibold min-w-[120px] text-center">
+                    <th key={dateStr} className="py-2.5 sm:py-3 px-2 sm:px-3 font-semibold min-w-[95px] sm:min-w-[110px] text-center border-r border-slate-200 dark:border-slate-700">
                       <div className="font-bold text-slate-800 dark:text-slate-100">{info.dayName}</div>
                       <div className="text-[10px] text-slate-400 font-normal">
                         {info.dayNumber} {info.monthName.slice(0, 3)}
@@ -248,7 +281,7 @@ export const GeneralScheduleView: React.FC = () => {
                     </th>
                   );
                 })}
-                <th className="py-3 px-4 font-bold text-right min-w-[90px]">Total Semanal</th>
+                <th className="py-2.5 sm:py-3 px-3 font-bold text-right min-w-[80px]">Total Semanal</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -264,9 +297,9 @@ export const GeneralScheduleView: React.FC = () => {
                         : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/40'
                     }`}
                   >
-                    <td className="py-3 px-4 sticky left-0 bg-white dark:bg-slate-900 z-10 border-r border-slate-100 dark:border-slate-800">
+                    <td className="py-2 sm:py-3 px-3 sm:px-4 sticky left-0 bg-white dark:bg-slate-900 z-10 border-r border-slate-200 dark:border-slate-800">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-slate-900 dark:text-white truncate">{row.employeeName}</span>
+                        <span className="text-slate-900 dark:text-white truncate font-medium">{row.employeeName}</span>
                         {isMe && (
                           <span className="text-[9px] bg-indigo-600 text-white px-1.5 py-0.2 rounded font-bold">
                             TÚ
@@ -286,7 +319,11 @@ export const GeneralScheduleView: React.FC = () => {
                         displayLabel = 'No disponible';
                       }
 
-                      const shiftStyle = getShiftStyle(shift, customColorOverrides);
+                      const mergedOverrides = {
+                        ...(currentSchedule.colorOverrides || {}),
+                        ...customColorOverrides,
+                      };
+                      const shiftStyle = getShiftStyle(shift, mergedOverrides);
 
                       return (
                         <td
@@ -297,7 +334,12 @@ export const GeneralScheduleView: React.FC = () => {
                             className={shiftStyle.badgeClasses}
                             style={shiftStyle.style}
                           >
-                            <div className="font-extrabold text-xs leading-tight">{displayLabel}</div>
+                            <div
+                              className="font-black text-xs leading-tight"
+                              style={shiftStyle.isFree ? { color: '#000000' } : undefined}
+                            >
+                              {displayLabel}
+                            </div>
                             {shift && shift.hours > 0 && (
                               <div
                                 className="text-[10px] mt-0.5 opacity-80"
@@ -311,7 +353,7 @@ export const GeneralScheduleView: React.FC = () => {
                       );
                     })}
 
-                    <td className="py-3 px-4 text-right font-bold text-slate-900 dark:text-white">
+                    <td className="py-2.5 sm:py-3 px-3 text-right font-bold text-slate-900 dark:text-white">
                       {row.totalHours} h
                     </td>
                   </tr>

@@ -409,6 +409,27 @@ export function parseScheduleInput(
     }
   }
 
+  // REGLA 5: "Nunca permitir que INES y JAKELINE coincidan en el mismo turno de tarde.
+  // Aplicar esta regla también a los intercambios y a las importaciones de turnos."
+  const inesRow = rows.find(r => r.employeeId === 'emp-5' || r.employeeName.toLowerCase().includes('ines'));
+  const jakeRow = rows.find(r => r.employeeId === 'emp-9' || r.employeeName.toLowerCase().includes('jakeline'));
+
+  if (inesRow && jakeRow) {
+    for (const dateStr of weekDates) {
+      const inesShift = inesRow.days[dateStr];
+      const jakeShift = jakeRow.days[dateStr];
+      if (inesShift && jakeShift) {
+        const inesIsAfternoon = (inesShift.rawText || '').trim().toUpperCase() === 'T' || inesShift.startTime === '16:00';
+        const jakeIsAfternoon = (jakeShift.rawText || '').trim().toUpperCase() === 'T' || jakeShift.startTime === '16:00';
+        if (inesIsAfternoon && jakeIsAfternoon) {
+          errors.push(
+            `Conflicto de normativa: Inés y Jakeline coinciden en el turno de tarde (T) el día ${dateStr}. La normativa del Hotel HM Gran Fiesta no permite que coincidan en el mismo turno de tarde.`
+          );
+        }
+      }
+    }
+  }
+
   const success = errors.length === 0 && rows.length > 0;
 
   return {

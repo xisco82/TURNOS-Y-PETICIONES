@@ -1,5 +1,13 @@
 export type Role = 'admin' | 'employee';
 
+export type EmployeePosition =
+  | 'Jefe'
+  | '2 Jefa'
+  | 'Conserje de noche'
+  | 'Recepcionista'
+  | 'Ayudante de recepción'
+  | string;
+
 export interface User {
   id: string;
   name: string;
@@ -8,6 +16,7 @@ export interface User {
   dni?: string;
   phone?: string;
   role: Role;
+  position?: EmployeePosition;
   status: 'active' | 'deactivated' | 'deleted';
   tempPassword?: string;
   mustChangePassword?: boolean;
@@ -30,6 +39,10 @@ export interface ShiftDetail {
   note?: string;
   textColor?: string;
   bgColor?: string;
+  fontWeight?: string;
+  fontStyle?: string;
+  textAlign?: string;
+  border?: string;
 }
 
 export type DayShift = ShiftDetail;
@@ -40,6 +53,15 @@ export interface EmployeeScheduleRow {
   totalHours: number;
   warnings: string[];
   days: Record<string, ShiftDetail>;
+}
+
+export interface CellStyleOverride {
+  textColor?: string;
+  bgColor?: string;
+  fontWeight?: string;
+  fontStyle?: string;
+  textAlign?: string;
+  border?: string;
 }
 
 export interface WeekSchedule {
@@ -54,7 +76,7 @@ export interface WeekSchedule {
   changeReason?: string;
   rows: EmployeeScheduleRow[];
   rawInputText?: string;
-  colorOverrides?: Record<string, { textColor?: string; bgColor?: string }>;
+  colorOverrides?: Record<string, CellStyleOverride>;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -72,11 +94,15 @@ export interface ShiftChangeRequest {
   employeeId: string;
   employeeName: string;
   type: 'shift_change';
+  swapKind?: 'shift' | 'day_off'; // Intercambio de turno o de día libre
   date: string;
   currentShift: string;
   proposedShift: string;
+  targetDate?: string;
+  coworkerCurrentShift?: string;
   coworkerId?: string;
   coworkerName?: string;
+  coworkerPhone?: string;
   coworkerStatus?: 'pending' | 'accepted' | 'rejected';
   status: 'pending' | 'approved' | 'rejected' | 'cancelled';
   comments: CommentItem[];

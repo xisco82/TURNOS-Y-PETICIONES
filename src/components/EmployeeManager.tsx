@@ -39,6 +39,7 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
     aliases: '',
     email: '',
     phone: '',
+    position: 'Recepcionista',
   });
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -68,11 +69,12 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
         aliases: formData.aliases ? formData.aliases.split(',').map(s => s.trim()).filter(Boolean) : [],
         email: formData.email.trim() || undefined,
         phone: formData.phone.trim() || undefined,
+        position: formData.position,
       });
 
       setNewPasswordCreated({ name: created.name, pass: created.tempPassword || 'emp1234' });
       setShowAddModal(false);
-      setFormData({ name: '', dni: '', aliases: '', email: '', phone: '' });
+      setFormData({ name: '', dni: '', aliases: '', email: '', phone: '', position: 'Recepcionista' });
       onRefresh();
     } catch (err: any) {
       setErrorNotification(err.message || 'Error al añadir empleado');
@@ -95,6 +97,7 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
         email: editingUser.email,
         phone: editingUser.phone,
         status: editingUser.status,
+        position: editingUser.position,
       });
       setEditingUser(null);
       onRefresh();
@@ -243,6 +246,11 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
                     >
                       {emp.status === 'active' ? 'Cuenta Activa' : 'Desactivada'}
                     </span>
+                    {emp.position && (
+                      <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                        {emp.position}
+                      </span>
+                    )}
                     {emp.dni && (
                       <span className="inline-block text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
                         DNI: {emp.dni}
@@ -432,6 +440,21 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
                 />
               </div>
 
+              <div>
+                <label className="block font-semibold mb-1">Rol interno (No visible en cuadrantes)</label>
+                <select
+                  value={formData.position}
+                  onChange={e => setFormData({ ...formData, position: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none font-semibold"
+                >
+                  <option value="Jefe">Jefe</option>
+                  <option value="2 Jefa">2 Jefa</option>
+                  <option value="Conserje de noche">Conserje de noche</option>
+                  <option value="Recepcionista">Recepcionista</option>
+                  <option value="Ayudante de recepción">Ayudante de recepción</option>
+                </select>
+              </div>
+
               <div className="flex justify-end gap-2 pt-3">
                 <button
                   type="button"
@@ -510,6 +533,21 @@ export const EmployeeManager: React.FC<Props> = ({ employees, onRefresh }) => {
                   onChange={e => setEditingUser({ ...editingUser, phone: e.target.value })}
                   className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
                 />
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Rol interno (No visible en cuadrantes)</label>
+                <select
+                  value={editingUser.position || 'Recepcionista'}
+                  onChange={e => setEditingUser({ ...editingUser, position: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none font-semibold"
+                >
+                  <option value="Jefe">Jefe</option>
+                  <option value="2 Jefa">2 Jefa</option>
+                  <option value="Conserje de noche">Conserje de noche</option>
+                  <option value="Recepcionista">Recepcionista</option>
+                  <option value="Ayudante de recepción">Ayudante de recepción</option>
+                </select>
               </div>
 
               <div>

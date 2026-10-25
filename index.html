@@ -19,18 +19,31 @@
     <link rel="apple-touch-icon" href="https://i.postimg.cc/tCJTx2DZ/XISCO-LOGO.png" />
     <script>
       // Suppress harmless Vite HMR WebSocket closed errors in preview iframe
-      window.addEventListener('error', function(e) {
-        if (e.message && (e.message.includes('WebSocket') || e.message.includes('ws://') || e.message.includes('wss://'))) {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-        }
-      });
-      window.addEventListener('unhandledrejection', function(e) {
-        if (e.reason && String(e.reason).includes('WebSocket')) {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-        }
-      });
+      (function() {
+        const origError = console.error;
+        console.error = function(...args) {
+          const str = args.map(a => (a && a.message) || String(a || '')).join(' ');
+          if (str.includes('WebSocket') || str.includes('ws://') || str.includes('wss://') || str.includes('[vite]')) {
+            return;
+          }
+          origError.apply(console, args);
+        };
+        window.addEventListener('error', function(e) {
+          const msg = (e && e.message) || '';
+          if (msg.includes('WebSocket') || msg.includes('ws://') || msg.includes('wss://') || msg.includes('[vite]')) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return true;
+          }
+        }, true);
+        window.addEventListener('unhandledrejection', function(e) {
+          const msg = String(e && (e.reason?.message || e.reason || ''));
+          if (msg.includes('WebSocket') || msg.includes('ws://') || msg.includes('wss://') || msg.includes('[vite]')) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+          }
+        }, true);
+      })();
     </script>
   </head>
   <body class="bg-slate-50 text-slate-900 antialiased selection:bg-indigo-500 selection:text-white">

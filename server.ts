@@ -91,8 +91,8 @@ export function normalizeDni(dni?: string): string {
 
 const ADMIN_USER: User = {
   id: 'admin-1',
-  name: 'Administrador Principal (Francisco Gallego Huguet)',
-  aliases: ['Admin', 'Dirección', 'Xisco', 'xiscooquin', 'Francisco Gallego'],
+  name: 'Administrador Principal (Xisco G. H.)',
+  aliases: ['Admin', 'Dirección', 'Xisco G. H.', 'Xisco', 'xiscooquin', 'Francisco Gallego Huguet', 'Francisco Gallego'],
   email: 'xiscooquin@gmail.com',
   dni: '43134155-R',
   phone: '+34 600 000 000',
@@ -170,10 +170,61 @@ function loadDatabase() {
       // Ensure all collections exist
       if (!db.users || !Array.isArray(db.users)) db.users = [ADMIN_USER];
 
-      const adminInDb = db.users.find(u => u.role === 'admin' || u.id === 'admin-1');
+      const OFFICIAL_POSITIONS: Record<string, string> = {
+        'emp-1': 'Jefe',
+        'admin-1': 'Jefe',
+        'emp-2': '2 Jefa',
+        'emp-3': 'Conserje de noche',
+        'emp-4': 'Recepcionista',
+        'emp-5': 'Ayudante de recepción',
+        'emp-6': 'Recepcionista',
+        'emp-7': 'Recepcionista',
+        'emp-8': 'Recepcionista',
+        'emp-9': 'Ayudante de recepción',
+        'emp-10': 'Recepcionista',
+      };
+
+      // Assign internal roles (not shown in quadrants)
+      for (const u of db.users) {
+        if (OFFICIAL_POSITIONS[u.id]) {
+          u.position = OFFICIAL_POSITIONS[u.id];
+        } else if (u.name.toLowerCase().includes('xisco')) {
+          u.position = 'Jefe';
+        } else if (u.name.toLowerCase().includes('aliz')) {
+          u.position = '2 Jefa';
+        } else if (u.name.toLowerCase().includes('oscar')) {
+          u.position = 'Conserje de noche';
+        } else if (u.name.toLowerCase().includes('ines')) {
+          u.position = 'Ayudante de recepción';
+        } else if (u.name.toLowerCase().includes('jakeline') || u.name.toLowerCase().includes('jaqueline')) {
+          u.position = 'Ayudante de recepción';
+        } else if (u.role === 'employee' && !u.position) {
+          u.position = 'Recepcionista';
+        }
+      }
+
+      // Grant full administrator rights to Xisco G. H. (both emp-1 and admin-1)
+      for (const u of db.users) {
+        if (
+          u.id === 'emp-1' ||
+          u.id === 'admin-1' ||
+          u.name.toLowerCase().includes('xisco') ||
+          u.name.toLowerCase().includes('francisco gallego')
+        ) {
+          u.role = 'admin';
+          u.position = 'Jefe';
+          if (!u.aliases.includes('Xisco G. H.')) {
+            u.aliases.unshift('Xisco G. H.');
+          }
+        }
+      }
+
+      const adminInDb = db.users.find(u => u.id === 'admin-1' || u.role === 'admin');
       if (adminInDb) {
         adminInDb.email = ADMIN_USER.email;
         adminInDb.tempPassword = ADMIN_USER.tempPassword;
+        adminInDb.position = 'Jefe';
+        adminInDb.role = 'admin';
         if (!adminInDb.dni) adminInDb.dni = ADMIN_USER.dni;
       }
 
@@ -200,6 +251,51 @@ function loadDatabase() {
     db = getInitialDatabase();
     saveDatabase();
   }
+}
+
+// Function to dispatch email to the official address rec1granfiesta@hmhotels.com
+function notifyGranFiestaEmail(subject: string, bodyText: string) {
+  const emailEntry = {
+    id: `email-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+    to: 'rec1granfiesta@hmhotels.com',
+    subject: `Hotel HM Gran Fiesta - ${subject}`,
+    body: bodyText,
+    date: new Date().toISOString(),
+  };
+  db.sentEmails.unshift(emailEntry);
+  if (db.sentEmails.length > 300) db.sentEmails.pop();
+  console.log(`[EMAIL TO rec1granfiesta@hmhotels.com] ${subject}`);
+}
+
+// Validation helpers for Inés & Jakeline Rule (Rule 5)
+function isInes(idOrName?: string): boolean {
+  if (!idOrName) return false;
+  const s = idOrName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return s === 'emp-5' || s.includes('ines') || s.includes('ruiz');
+}
+
+function isJakeline(idOrName?: string): boolean {
+  if (!idOrName) return false;
+  const s = idOrName.toLowerCase();
+  return s === 'emp-9' || s.includes('jakeline') || s.includes('jaqueline') || s.includes('munera');
+}
+
+function isAfternoon(shiftText?: string): boolean {
+  if (!shiftText) return false;
+  const s = shiftText.trim().toUpperCase();
+  return s === 'T' || s.startsWith('T ') || s.includes('16:00') || s.includes('TARDE');
+}
+
+function checkInesJakelineConflict(empA: string, shiftA: string, empB: string, shiftB: string): string | null {
+  const aInes = isInes(empA);
+  const aJake = isJakeline(empA);
+  const bInes = isInes(empB);
+  const bJake = isJakeline(empB);
+
+  if (((aInes && bJake) || (aJake && bInes)) && isAfternoon(shiftA) && isAfternoon(shiftB)) {
+    return 'Normativa del Hotel HM Gran Fiesta: INES y JAKELINE nunca pueden coincidir en el mismo turno de tarde (T).';
+  }
+  return null;
 }
 
 function saveDatabase() {
@@ -888,6 +984,7 @@ app.put('/api/users/:id', authMiddleware, adminOnly, (req: AuthRequest, res) => 
     }
     user.status = status;
   }
+  if (req.body.position !== undefined) user.position = req.body.position;
 
   if (resetPassword) {
     user.tempPassword = `temp${Math.floor(1000 + Math.random() * 9000)}`;
@@ -1020,7 +1117,25 @@ app.post('/api/schedules/draft', authMiddleware, adminOnly, (req: AuthRequest, r
 
 // Publish schedule
 app.post('/api/schedules/publish', authMiddleware, adminOnly, (req: AuthRequest, res) => {
-  const { id, weekStartDate, weekEndDate, weekLabel, rows, rawInputText, changeReason } = req.body;
+  const { id, weekStartDate, weekEndDate, weekLabel, rows, rawInputText, changeReason, colorOverrides } = req.body;
+
+  // Enforce Rule 5: INES and JAKELINE afternoon conflict
+  if (rows && Array.isArray(rows)) {
+    const inesRow = rows.find((r: any) => isInes(r.employeeId) || isInes(r.employeeName));
+    const jakeRow = rows.find((r: any) => isJakeline(r.employeeId) || isJakeline(r.employeeName));
+    if (inesRow && jakeRow) {
+      for (const [dateStr, inesShift] of Object.entries(inesRow.days || {})) {
+        const jakeShift = (jakeRow.days || {})[dateStr] as any;
+        if (inesShift && jakeShift) {
+          if (isAfternoon((inesShift as any).rawText) && isAfternoon((jakeShift as any).rawText)) {
+            return res.status(400).json({
+              error: `Normativa del Hotel HM Gran Fiesta: INES y JAKELINE no pueden coincidir en el turno de tarde (T) el día ${dateStr}.`,
+            });
+          }
+        }
+      }
+    }
+  }
 
   let schedule = id ? db.schedules.find(s => s.id === id) : null;
   const isUpdate = schedule && schedule.status === 'published';
@@ -1032,6 +1147,7 @@ app.post('/api/schedules/publish', authMiddleware, adminOnly, (req: AuthRequest,
     schedule.weekLabel = weekLabel || schedule.weekLabel;
     schedule.rows = rows || schedule.rows;
     schedule.rawInputText = rawInputText || schedule.rawInputText;
+    if (colorOverrides !== undefined) schedule.colorOverrides = colorOverrides;
     schedule.status = 'published';
     schedule.version = isUpdate ? schedule.version + 1 : 1;
     schedule.publishedAt = new Date().toISOString();
@@ -1050,6 +1166,7 @@ app.post('/api/schedules/publish', authMiddleware, adminOnly, (req: AuthRequest,
       publishedBy: req.user!.name,
       rows,
       rawInputText,
+      colorOverrides: colorOverrides || undefined,
       changeReason: '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -1113,15 +1230,146 @@ app.get('/api/requests', authMiddleware, (req: AuthRequest, res) => {
   });
 });
 
+// Function to parse shift hours
+function parseShiftHours(shiftCodeOrText: string): number {
+  const code = (shiftCodeOrText || '').trim().toUpperCase();
+  if (code === 'L' || code === 'LIBRE' || code === 'V' || code === 'VAC' || code === 'BP' || code === 'AP') {
+    return 0;
+  }
+  if (code === 'M' || code === 'T' || code === 'N') {
+    return 8;
+  }
+  const match = shiftCodeOrText.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+  if (match) {
+    const startH = parseInt(match[1], 10);
+    const endH = parseInt(match[3], 10);
+    return endH >= startH ? endH - startH : (24 - startH) + endH;
+  }
+  return 8;
+}
+
+// Execute shift swap on both employees' rows in the active schedule
+function executeShiftSwapInSchedule(sc: ShiftChangeRequest): { success: boolean; error?: string } {
+  // Check Inés & Jakeline rule (Rule 5)
+  const conflict = checkInesJakelineConflict(
+    sc.employeeId,
+    sc.proposedShift,
+    sc.coworkerId || '',
+    sc.currentShift
+  );
+  if (conflict) {
+    return { success: false, error: conflict };
+  }
+
+  const targetDateA = sc.date;
+  const targetDateB = sc.targetDate || sc.date;
+
+  let schedule = db.schedules.find(
+    s => s.status === 'published' && targetDateA >= s.weekStartDate && targetDateA <= s.weekEndDate
+  );
+  if (!schedule) {
+    schedule = db.schedules.find(s => targetDateA >= s.weekStartDate && targetDateA <= s.weekEndDate);
+  }
+
+  if (!schedule) {
+    return { success: false, error: 'No se encontró el cuadrante para la semana indicada' };
+  }
+
+  const rowA = schedule.rows.find(r => r.employeeId === sc.employeeId);
+  const rowB = sc.coworkerId ? schedule.rows.find(r => r.employeeId === sc.coworkerId) : undefined;
+
+  if (!rowA) {
+    return { success: false, error: `No se encontró al empleado ${sc.employeeName} en el cuadrante` };
+  }
+
+  // Pre-check for Inés and Jakeline across the entire week on date targetDateA
+  const inesRow = schedule.rows.find(r => isInes(r.employeeId) || isInes(r.employeeName));
+  const jakeRow = schedule.rows.find(r => isJakeline(r.employeeId) || isJakeline(r.employeeName));
+  if (inesRow && jakeRow) {
+    const inesNewA =
+      rowA.employeeId === inesRow.employeeId
+        ? sc.proposedShift
+        : rowB?.employeeId === inesRow.employeeId
+        ? sc.currentShift
+        : inesRow.days[targetDateA]?.rawText;
+    const jakeNewA =
+      rowA.employeeId === jakeRow.employeeId
+        ? sc.proposedShift
+        : rowB?.employeeId === jakeRow.employeeId
+        ? sc.currentShift
+        : jakeRow.days[targetDateA]?.rawText;
+    if (isAfternoon(inesNewA) && isAfternoon(jakeNewA)) {
+      return {
+        success: false,
+        error:
+          'Normativa del Hotel HM Gran Fiesta: INES y JAKELINE no pueden coincidir en el turno de tarde (T) el mismo día.',
+      };
+    }
+  }
+
+  // Apply shift to Employee A
+  const isFreeA = sc.proposedShift.trim().toUpperCase() === 'L' || sc.proposedShift.trim().toUpperCase() === 'LIBRE';
+  const hoursA = parseShiftHours(sc.proposedShift);
+  rowA.days[targetDateA] = {
+    type: isFreeA ? 'free' : 'work',
+    rawText: sc.proposedShift,
+    hours: hoursA,
+    startTime:
+      sc.proposedShift === 'M' ? '08:00' : sc.proposedShift === 'T' ? '16:00' : sc.proposedShift === 'N' ? '00:00' : undefined,
+    endTime:
+      sc.proposedShift === 'M' ? '16:00' : sc.proposedShift === 'T' ? '00:00' : sc.proposedShift === 'N' ? '08:00' : undefined,
+    isOvernight: sc.proposedShift === 'N',
+    note: `Intercambio de turno con ${sc.coworkerName || 'compañero'}`,
+  };
+  rowA.totalHours = Math.round(Object.values(rowA.days).reduce((acc, d) => acc + (d.hours || 0), 0) * 100) / 100;
+
+  // Apply shift to Coworker B if coworker exists
+  if (rowB) {
+    const returnShift = sc.coworkerCurrentShift || sc.currentShift;
+    const isFreeB = returnShift.trim().toUpperCase() === 'L' || returnShift.trim().toUpperCase() === 'LIBRE';
+    const hoursB = parseShiftHours(returnShift);
+    rowB.days[targetDateB] = {
+      type: isFreeB ? 'free' : 'work',
+      rawText: returnShift,
+      hours: hoursB,
+      startTime:
+        returnShift === 'M' ? '08:00' : returnShift === 'T' ? '16:00' : returnShift === 'N' ? '00:00' : undefined,
+      endTime:
+        returnShift === 'M' ? '16:00' : returnShift === 'T' ? '00:00' : returnShift === 'N' ? '08:00' : undefined,
+      isOvernight: returnShift === 'N',
+      note: `Intercambio de turno con ${sc.employeeName}`,
+    };
+    rowB.totalHours = Math.round(Object.values(rowB.days).reduce((acc, d) => acc + (d.hours || 0), 0) * 100) / 100;
+  }
+
+  schedule.version += 1;
+  schedule.changeReason = `Intercambio de turnos acordado entre ${sc.employeeName} y ${sc.coworkerName || 'compañero'}`;
+  schedule.updatedAt = new Date().toISOString();
+
+  return { success: true };
+}
+
 // Create shift change request
 app.post('/api/requests/shift-change', authMiddleware, (req: AuthRequest, res) => {
-  const { date, currentShift, proposedShift, coworkerId, comments } = req.body;
+  const { date, currentShift, proposedShift, coworkerId, comments, swapKind, targetDate, coworkerCurrentShift } = req.body;
   const user = req.user!;
 
   let coworkerName = '';
+  let coworkerPhone = '';
   if (coworkerId) {
     const cw = db.users.find(u => u.id === coworkerId);
-    if (cw) coworkerName = cw.name;
+    if (cw) {
+      coworkerName = cw.name;
+      coworkerPhone = cw.phone || '';
+    }
+  }
+
+  // Pre-validate Rule 5: INES and JAKELINE afternoon conflict
+  if (coworkerId) {
+    const conflict = checkInesJakelineConflict(user.id, proposedShift, coworkerId, currentShift);
+    if (conflict) {
+      return res.status(400).json({ error: conflict });
+    }
   }
 
   const initialComments = comments
@@ -1141,11 +1389,15 @@ app.post('/api/requests/shift-change', authMiddleware, (req: AuthRequest, res) =
     employeeId: user.id,
     employeeName: user.name,
     type: 'shift_change',
+    swapKind: swapKind || (proposedShift === 'L' || currentShift === 'L' ? 'day_off' : 'shift'),
     date,
     currentShift,
     proposedShift,
+    targetDate: targetDate || date,
+    coworkerCurrentShift: coworkerCurrentShift || '',
     coworkerId,
     coworkerName,
+    coworkerPhone,
     coworkerStatus: coworkerId ? 'pending' : undefined,
     status: 'pending',
     comments: initialComments,
@@ -1156,25 +1408,31 @@ app.post('/api/requests/shift-change', authMiddleware, (req: AuthRequest, res) =
   db.shiftRequests.unshift(newReq);
   saveDatabase();
 
-  addAuditLog(user.id, user.name, `Solicitud de cambio de turno para el ${date}`, 'solicitud');
+  addAuditLog(user.id, user.name, `Solicitud de intercambio de turno para el ${date} con ${coworkerName || 'compañero'}`, 'solicitud');
 
-  // If coworker is tagged, notify coworker first
+  // Notify coworker
   if (coworkerId) {
     sendNotification(
       coworkerId,
       'Petición de intercambio de turno',
-      `${user.name} te ha propuesto un cambio de turno para el día ${date}. Entra a aceptar o rechazar.`,
+      `${user.name} te ha propuesto un intercambio para el ${date} (${currentShift} por ${proposedShift}). Entra a aceptar o rechazar.`,
       'coworker_shift_request'
     );
-  } else {
-    // Notify admin
-    sendNotification(
-      'admin-1',
-      'Nueva solicitud de cambio de turno',
-      `${user.name} solicita cambiar su turno del día ${date}.`,
-      'request_created'
-    );
   }
+
+  // Notify admin
+  sendNotification(
+    'admin-1',
+    'Nueva solicitud de intercambio de turno',
+    `${user.name} solicita intercambio de turno con ${coworkerName || 'compañero'} para el ${date}.`,
+    'request_created'
+  );
+
+  // Requirement 3: Enviar un correo a rec1granfiesta@hmhotels.com con el resultado de cada solicitud
+  notifyGranFiestaEmail(
+    `Nueva solicitud de intercambio de turnos - ${user.name}`,
+    `Hola,\n\nSe ha registrado una nueva solicitud de intercambio en el sistema:\n\n• Solicitante: ${user.name}\n• Compañero: ${coworkerName || 'No especificado'}\n• Fecha: ${date}\n• Turno actual solicitante: ${currentShift}\n• Turno propuesto / cambio: ${proposedShift}\n• Estado actual: Pendiente de confirmación\n\nAtentamente,\nSistema de Gestión de Turnos - Hotel HM Gran Fiesta`
+  );
 
   res.status(201).json(newReq);
 });
@@ -1187,8 +1445,9 @@ app.post('/api/requests/shift-change/:id/coworker-response', authMiddleware, (re
   const item = db.shiftRequests.find(r => r.id === id);
   if (!item) return res.status(404).json({ error: 'Solicitud no encontrada' });
 
-  if (item.coworkerId !== req.user!.id) {
-    return res.status(403).json({ error: 'No eres el compañero asignado a esta solicitud' });
+  // Allow either the coworker or admin to respond
+  if (item.coworkerId !== req.user!.id && req.user!.role !== 'admin') {
+    return res.status(403).json({ error: 'No tienes permiso para responder a esta solicitud' });
   }
 
   item.coworkerStatus = response;
@@ -1197,27 +1456,48 @@ app.post('/api/requests/shift-change/:id/coworker-response', authMiddleware, (re
       id: `c-${Date.now()}`,
       userId: req.user!.id,
       userName: req.user!.name,
-      text: `[Respuesta compañero: ${response === 'accepted' ? 'Aceptado' : 'Rechazado'}] ${comment}`,
+      text: `[Respuesta ${req.user!.name}: ${response === 'accepted' ? 'Aceptado' : 'Rechazado'}] ${comment}`,
       createdAt: new Date().toISOString(),
     });
   }
   item.updatedAt = new Date().toISOString();
 
   if (response === 'rejected') {
+    // Si se deniega, no modificar nada en los cuadrantes
     item.status = 'rejected';
+
     sendNotification(
       item.employeeId,
-      'Intercambio de turno no aceptado',
-      `${req.user!.name} no ha aceptado la propuesta de intercambio de turno.`,
+      'Intercambio de turno denegado',
+      `${req.user!.name} ha denegado la solicitud de intercambio para el ${item.date}.`,
       'request_updated'
     );
+
+    // Requirement 3: Enviar correo a rec1granfiesta@hmhotels.com
+    notifyGranFiestaEmail(
+      `Solicitud de intercambio DENEGADA - ${item.employeeName} y ${item.coworkerName}`,
+      `Hola,\n\nLa solicitud de intercambio de turno ha sido DENEGADA:\n\n• Solicitante: ${item.employeeName}\n• Compañero: ${item.coworkerName}\n• Fecha: ${item.date}\n• Resultado: DENEGADO por ${req.user!.name}\n• Acción en cuadrante: Ninguna (los cuadrantes se mantienen intactos).\n\nAtentamente,\nHotel HM Gran Fiesta`
+    );
   } else {
-    // Reached admin for final review
+    // Si se acepta, actualizar correctamente los cuadrantes de ambos empleados
+    const swapResult = executeShiftSwapInSchedule(item);
+    if (!swapResult.success) {
+      return res.status(400).json({ error: swapResult.error || 'No se pudo aplicar el intercambio al cuadrante' });
+    }
+
+    item.status = 'approved';
+
     sendNotification(
-      'admin-1',
-      'Cambio de turno aceptado por compañero',
-      `${req.user!.name} ha aceptado el intercambio propuesto por ${item.employeeName}. Pendiente de tu aprobación.`,
-      'request_created'
+      item.employeeId,
+      '¡Intercambio de turno aceptado y aplicado!',
+      `${req.user!.name} ha aceptado el intercambio de turno para el ${item.date}. Los cuadrantes se han actualizado automáticamente.`,
+      'request_updated'
+    );
+
+    // Requirement 3: Enviar correo a rec1granfiesta@hmhotels.com
+    notifyGranFiestaEmail(
+      `Solicitud de intercambio ACEPTADA - ${item.employeeName} y ${item.coworkerName}`,
+      `Hola,\n\nLa solicitud de intercambio de turnos ha sido ACEPTADA y aplicada con éxito:\n\n• Solicitante: ${item.employeeName} (Pasa al turno: ${item.proposedShift})\n• Compañero: ${item.coworkerName} (Pasa al turno: ${item.currentShift})\n• Fecha: ${item.date}\n• Aceptado por: ${req.user!.name}\n• Resultado: Cuadrante oficial de la plantilla actualizado automáticamente.\n\nAtentamente,\nHotel HM Gran Fiesta`
     );
   }
 
@@ -1268,76 +1548,20 @@ app.post('/api/requests/days-off', authMiddleware, (req: AuthRequest, res) => {
   // Notify admin
   sendNotification(
     'admin-1',
-    'Solicitud de días libres / vacaciones',
+    'Solicitud de días libres',
     `${user.name} ha solicitado días libres del ${startDate} al ${endDate}.`,
     'request_created'
   );
 
-  res.status(201).json(newReq);
-});
-
-// Create absence (communication vs leave request)
-app.post('/api/requests/absence', authMiddleware, (req: AuthRequest, res) => {
-  const { subType, category, startDate, endDate, hasCertificate, comment } = req.body;
-  const user = req.user!;
-
-  if (!startDate || !endDate) {
-    return res.status(400).json({ error: 'Fechas de ausencia requeridas' });
-  }
-
-  const initialComments = comment
-    ? [
-        {
-          id: `c-${Date.now()}`,
-          userId: user.id,
-          userName: user.name,
-          text: comment,
-          createdAt: new Date().toISOString(),
-        },
-      ]
-    : [];
-
-  const isCommunication = subType === 'communication';
-
-  const newReq: AbsenceRequest = {
-    id: `req-ab-${Date.now()}`,
-    employeeId: user.id,
-    employeeName: user.name,
-    type: 'absence',
-    subType: isCommunication ? 'communication' : 'leave_request',
-    category: category || 'medico',
-    startDate,
-    endDate,
-    hasCertificate: Boolean(hasCertificate),
-    status: isCommunication ? 'acknowledged' : 'pending',
-    comments: initialComments,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-
-  db.absenceRequests.unshift(newReq);
-  saveDatabase();
-
-  addAuditLog(
-    user.id,
-    user.name,
-    isCommunication
-      ? `Comunicación de ausencia (${startDate} al ${endDate})`
-      : `Petición de permiso de ausencia (${startDate} al ${endDate})`,
-    'solicitud'
-  );
-
-  sendNotification(
-    'admin-1',
-    isCommunication ? 'Comunicación de ausencia recibida' : 'Petición de permiso de ausencia',
-    `${user.name} ha registrado una ausencia del ${startDate} al ${endDate} (Justificante: ${hasCertificate ? 'Sí' : 'No'}).`,
-    'request_created'
+  notifyGranFiestaEmail(
+    `Nueva solicitud de días libres - ${user.name}`,
+    `Hola,\n\n${user.name} ha solicitado días libres:\n\n• Fechas: Del ${startDate} al ${endDate}\n• Motivo: ${comment || 'No especificado'}\n• Estado: Pendiente de aprobación\n\nAtentamente,\nHotel HM Gran Fiesta`
   );
 
   res.status(201).json(newReq);
 });
 
-// Update request status (Admin approval, rejection, or request more info)
+// Update request status (Admin approval, rejection)
 app.put('/api/requests/:type/:id/status', authMiddleware, adminOnly, (req: AuthRequest, res) => {
   const { type, id } = req.params;
   const { status, comment, applyToSchedule } = req.body;
@@ -1369,25 +1593,12 @@ app.put('/api/requests/:type/:id/status', authMiddleware, adminOnly, (req: AuthR
   }
   requestItem.updatedAt = new Date().toISOString();
 
-  // If approved and shift change, update the published schedule automatically!
-  if (status === 'approved' && type === 'shift-change' && applyToSchedule) {
+  // If approved and shift change, update both rows in the schedule
+  if (status === 'approved' && type === 'shift-change') {
     const sc = requestItem as ShiftChangeRequest;
-    // Find matching published schedule for that date
-    for (const sch of db.schedules.filter(s => s.status === 'published')) {
-      if (sc.date >= sch.weekStartDate && sc.date <= sch.weekEndDate) {
-        const empRow = sch.rows.find(r => r.employeeId === sc.employeeId);
-        if (empRow && empRow.days[sc.date]) {
-          empRow.days[sc.date] = {
-            type: 'work',
-            rawText: sc.proposedShift,
-            hours: 8, // approximated or parsed
-            note: 'Aprobado por cambio de turno',
-          };
-          sch.version += 1;
-          sch.changeReason = `Cambio de turno aprobado para ${sc.employeeName}`;
-          sch.updatedAt = new Date().toISOString();
-        }
-      }
+    const swapResult = executeShiftSwapInSchedule(sc);
+    if (!swapResult.success && applyToSchedule) {
+      return res.status(400).json({ error: swapResult.error || 'No se pudo aplicar al cuadrante' });
     }
   }
 
@@ -1406,8 +1617,14 @@ app.put('/api/requests/:type/:id/status', authMiddleware, adminOnly, (req: AuthR
   sendNotification(
     requestItem.employeeId,
     `Solicitud ${status === 'approved' ? 'aprobada' : status === 'rejected' ? 'rechazada' : 'actualizada'}`,
-    `Tu solicitud ha cambiado de estado a "${status}". Revisa los detalles en la app.`,
+    `Tu solicitud ha sido resuelta como "${status}". Revisa los detalles en la app.`,
     'request_updated'
+  );
+
+  // Requirement 3: Enviar correo a rec1granfiesta@hmhotels.com
+  notifyGranFiestaEmail(
+    `Resultado de Solicitud: ${status.toUpperCase()} (${requestItem.employeeName})`,
+    `Hola,\n\nSe ha actualizado el estado de la solicitud:\n\n• Solicitante: ${requestItem.employeeName}\n• Tipo: ${type}\n• Nuevo estado: ${status.toUpperCase()}\n• Resuelto por: ${req.user!.name} (Dirección)\n• Observaciones: ${comment || 'Ninguna'}\n\nAtentamente,\nHotel HM Gran Fiesta`
   );
 
   res.json(requestItem);
@@ -1848,13 +2065,12 @@ async function startServer() {
 
   if (isDev) {
     const { createServer } = await import('vite');
-    const isHmrDisabled = process.env.DISABLE_HMR === 'true';
-
+    // HMR is disabled in AI Studio container to prevent WebSocket errors and save CPU
     const vite = await createServer({
       server: {
         middlewareMode: true,
-        hmr: isHmrDisabled ? false : { server: httpServer },
-        watch: isHmrDisabled ? null : {},
+        hmr: false,
+        watch: null,
       },
       appType: 'spa',
     });

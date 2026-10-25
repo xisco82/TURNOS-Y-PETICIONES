@@ -353,7 +353,7 @@ export const Header: React.FC<HeaderProps> = ({
                       : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800'
                   }`}
                 >
-                  Solicitudes e Incidencias
+                  Solicitudes e Intercambios
                 </button>
                 <button
                   onClick={() => setActiveTab('employees')}

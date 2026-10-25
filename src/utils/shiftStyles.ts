@@ -1,4 +1,4 @@
-import { ShiftDetail } from '../types';
+import { ShiftDetail, CellStyleOverride } from '../types';
 
 export interface ShiftStyleResult {
   badgeClasses: string;
@@ -21,14 +21,16 @@ export const PRESET_TEXT_COLORS = [
 
 export function getShiftStyle(
   shift?: ShiftDetail,
-  customOverrides?: Record<string, { textColor?: string; bgColor?: string }>
+  customOverrides?: Record<string, CellStyleOverride>
 ): ShiftStyleResult {
   const code = (shift?.rawText || '').trim().toUpperCase();
   const isFree = code === 'L' || code === 'LIBRE' || shift?.type === 'free';
   const isAP = code === 'AP' || (shift?.note && shift.note.toLowerCase().includes('asuntos propios'));
 
-  let badgeClasses = 'p-1.5 rounded-lg text-center font-bold text-xs transition-colors shadow-2xs';
-  let tdClasses = 'py-2 px-2 text-center border-r border-slate-100 dark:border-slate-800/60 relative';
+  let badgeClasses = 'p-1.5 sm:p-1.5 rounded-lg text-center font-bold text-xs transition-colors shadow-2xs';
+  // Note: tdClasses maintains the default cell background, preserving clean table rows.
+  // Rule 2: "Al marcar un día libre, poner en amarillo únicamente el rectángulo de esa casilla, sin cambiar el resto de colores."
+  let tdClasses = 'py-1.5 sm:py-2 px-1.5 sm:px-2 text-center border-r border-slate-100 dark:border-slate-800/60 relative';
   const inlineStyle: React.CSSProperties = {};
 
   // Check code-level or shift-level override
@@ -37,13 +39,12 @@ export function getShiftStyle(
   const customBgColor = shift?.bgColor || override?.bgColor;
 
   if (isFree) {
-    // REGLA USUARIO: "los libres salgan la casilla completa en amarillo y letra negra"
-    tdClasses += ' bg-yellow-400 dark:bg-yellow-400';
-    badgeClasses += ' bg-yellow-400 text-black border border-yellow-500 font-extrabold shadow-sm';
+    // REGLA: Poner en amarillo ÚNICAMENTE el rectángulo interior de esa casilla, con letra L estrictamente en negro
+    badgeClasses += ' bg-[#FACC15] text-[#000000] border border-yellow-500 font-black shadow-xs';
     inlineStyle.backgroundColor = '#FACC15'; // Tailwind yellow-400
     inlineStyle.color = '#000000';
   } else if (isAP) {
-    // REGLA USUARIO: "y AP letras en verde"
+    // REGLA: AP letras en verde
     badgeClasses += ' bg-emerald-50 text-emerald-600 dark:bg-emerald-950/70 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-700 font-extrabold';
     inlineStyle.color = '#16a34a'; // Emerald-600 green
   } else if (code === 'M') {
@@ -64,12 +65,28 @@ export function getShiftStyle(
     badgeClasses += ' bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
   }
 
-  // REGLA USUARIO: "quiero poder pontar la letra en otro color si lo requiere"
-  if (customTextColor) {
+  // Preserve styles imported from Google Sheets (or manual color tool)
+  if (customTextColor && !isFree) {
     inlineStyle.color = customTextColor;
   }
-  if (customBgColor) {
+  // For free days, enforce solid black text
+  if (isFree) {
+    inlineStyle.color = '#000000';
+  }
+  if (customBgColor && !isFree) {
     inlineStyle.backgroundColor = customBgColor;
+  }
+  if (shift?.fontWeight || override?.fontWeight) {
+    inlineStyle.fontWeight = (shift?.fontWeight || override?.fontWeight) as any;
+  }
+  if (shift?.fontStyle || override?.fontStyle) {
+    inlineStyle.fontStyle = (shift?.fontStyle || override?.fontStyle) as any;
+  }
+  if (shift?.textAlign || override?.textAlign) {
+    inlineStyle.textAlign = (shift?.textAlign || override?.textAlign) as any;
+  }
+  if (shift?.border || override?.border) {
+    inlineStyle.border = shift?.border || override?.border;
   }
 
   return {
@@ -79,4 +96,50 @@ export function getShiftStyle(
     isFree: Boolean(isFree),
     isAP: Boolean(isAP),
   };
+}
+
+/**
+ * REGLA 5: "Nunca permitir que INES y JAKELINE coincidan en el mismo turno de tarde.
+ * Aplicar esta regla también a los intercambios y a las importaciones de turnos."
+ */
+export function isInes(employeeIdOrName: string): boolean {
+  if (!employeeIdOrName) return false;
+  const s = employeeIdOrName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return s === 'emp-5' || s.includes('ines') || s.includes('ruiz');
+}
+
+export function isJakeline(employeeIdOrName: string): boolean {
+  if (!employeeIdOrName) return false;
+  const s = employeeIdOrName.toLowerCase();
+  return s === 'emp-9' || s.includes('jakeline') || s.includes('jaqueline') || s.includes('munera');
+}
+
+export function isAfternoonShift(shiftRawOrCode: string): boolean {
+  if (!shiftRawOrCode) return false;
+  const s = shiftRawOrCode.trim().toUpperCase();
+  return s === 'T' || s.startsWith('T ') || s.includes('16:00') || s.includes('TARDE');
+}
+
+export function validateInesJakelineConflict(
+  empA: string,
+  shiftA: string,
+  empB: string,
+  shiftB: string
+): { hasConflict: boolean; reason?: string } {
+  const isAInes = isInes(empA);
+  const isAJake = isJakeline(empA);
+  const isBInes = isInes(empB);
+  const isBJake = isJakeline(empB);
+
+  const aIsAfternoon = isAfternoonShift(shiftA);
+  const bIsAfternoon = isAfternoonShift(shiftB);
+
+  if (((isAInes && isBJake) || (isAJake && isBInes)) && aIsAfternoon && bIsAfternoon) {
+    return {
+      hasConflict: true,
+      reason: 'Normativa del Hotel HM Gran Fiesta: INES y JAKELINE no pueden coincidir en el mismo turno de tarde (T).',
+    };
+  }
+
+  return { hasConflict: false };
 }

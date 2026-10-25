@@ -1,21 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import {
   Calendar,
-  Clock,
   ArrowLeftRight,
   SunMedium,
-  HeartPulse,
-  AlertOctagon,
   FileText,
   Users,
   CheckCircle2,
-  TrendingUp,
-  ArrowUpRight,
   ShieldCheck,
-  Sparkles,
 } from 'lucide-react';
 import { api } from '../services/api';
-import { WeekSchedule, ShiftChangeRequest, DaysOffRequest, AbsenceRequest, IncidentItem, User } from '../types';
+import { WeekSchedule, ShiftChangeRequest, DaysOffRequest, User } from '../types';
 import { DatabaseSyncIndicator } from './DatabaseSyncIndicator';
 
 interface Props {
@@ -27,24 +21,19 @@ export const AdminDashboard: React.FC<Props> = ({ onNavigate, employees }) => {
   const [schedules, setSchedules] = useState<WeekSchedule[]>([]);
   const [shiftRequests, setShiftRequests] = useState<ShiftChangeRequest[]>([]);
   const [daysOffRequests, setDaysOffRequests] = useState<DaysOffRequest[]>([]);
-  const [absenceRequests, setAbsenceRequests] = useState<AbsenceRequest[]>([]);
-  const [incidents, setIncidents] = useState<IncidentItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       try {
-        const [sch, req, inc] = await Promise.all([
+        const [sch, req] = await Promise.all([
           api.getSchedules(),
           api.getRequests(),
-          api.getIncidents(),
         ]);
         setSchedules(sch);
         setShiftRequests(req.shiftRequests);
         setDaysOffRequests(req.daysOffRequests);
-        setAbsenceRequests(req.absenceRequests);
-        setIncidents(inc);
       } catch (e) {
         console.error(e);
       } finally {
@@ -55,10 +44,10 @@ export const AdminDashboard: React.FC<Props> = ({ onNavigate, employees }) => {
   }, []);
 
   const pendingShiftChanges = shiftRequests.filter(r => r.status === 'pending').length;
+  const approvedShiftChanges = shiftRequests.filter(r => r.status === 'approved').length;
   const pendingDaysOff = daysOffRequests.filter(r => r.status === 'pending').length;
-  const totalAbsences = absenceRequests.length;
-  const openIncidents = incidents.filter(i => i.status === 'abierta').length;
-  const totalPending = pendingShiftChanges + pendingDaysOff + openIncidents;
+  const activeEmployeesCount = employees.filter(e => e.status === 'active').length;
+  const totalPending = pendingShiftChanges + pendingDaysOff;
 
   const lastPublishedSchedule = schedules.find(s => s.status === 'published');
 
@@ -74,8 +63,7 @@ export const AdminDashboard: React.FC<Props> = ({ onNavigate, employees }) => {
             Gestión Central de Turnos y Solicitudes
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 mt-1 leading-relaxed">
-            Control de cuadrantes semanales, 10 cuentas de empleados activas, resolución de cambios de turno,
-            ausencias médicas con estricta privacidad e incidencias.
+            Control de cuadrantes semanales, 10 cuentas de empleados con roles internos, intercambios funcionales de turnos y días libres con avisos por WhatsApp y correo a rec1granfiesta@hmhotels.com.
           </p>
 
           <div className="flex flex-wrap items-center gap-3 mt-5">
@@ -84,7 +72,7 @@ export const AdminDashboard: React.FC<Props> = ({ onNavigate, employees }) => {
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-bold text-xs shadow-lg shadow-indigo-600/30 transition active:scale-95"
             >
               <FileText className="w-4 h-4" />
-              <span>Pegar Nuevo Cuadrante</span>
+              <span>Pegar Cuadrante desde Sheets</span>
             </button>
 
             <button
@@ -104,7 +92,7 @@ export const AdminDashboard: React.FC<Props> = ({ onNavigate, employees }) => {
       {/* Database Synchronization Status Card */}
       <DatabaseSyncIndicator variant="card" />
 
-      {/* Operational Counters (Section 8) */}
+      {/* Operational Counters */}
       <div>
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 px-1">
           Contadores Operativos
@@ -117,7 +105,7 @@ export const AdminDashboard: React.FC<Props> = ({ onNavigate, employees }) => {
             className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs hover:border-indigo-400 cursor-pointer transition group"
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">Cambios de Turno</span>
+              <span className="text-xs font-semibold text-slate-500">Cambios Pendientes</span>
               <div className="p-2 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 rounded-xl group-hover:scale-110 transition">
                 <ArrowLeftRight className="w-4 h-4" />
               </div>
@@ -125,7 +113,7 @@ export const AdminDashboard: React.FC<Props> = ({ onNavigate, employees }) => {
             <div className="text-2xl font-black text-slate-900 dark:text-white mt-2">
               {pendingShiftChanges}
             </div>
-            <span className="text-[11px] text-slate-400 font-medium">pendientes de revisión</span>
+            <span className="text-[11px] text-slate-400 font-medium">intercambios en curso</span>
           </div>
 
           {/* 2. Días libres solicitados */}
@@ -134,7 +122,7 @@ export const AdminDashboard: React.FC<Props> = ({ onNavigate, employees }) => {
             className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs hover:border-amber-400 cursor-pointer transition group"
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">Días Libres / Vacaciones</span>
+              <span className="text-xs font-semibold text-slate-500">Días Libres</span>
               <div className="p-2 bg-amber-50 dark:bg-amber-950/60 text-amber-600 rounded-xl group-hover:scale-110 transition">
                 <SunMedium className="w-4 h-4" />
               </div>
@@ -145,38 +133,38 @@ export const AdminDashboard: React.FC<Props> = ({ onNavigate, employees }) => {
             <span className="text-[11px] text-slate-400 font-medium">peticiones pendientes</span>
           </div>
 
-          {/* 3. Ausencias comunicadas */}
+          {/* 3. Cambios aprobados y aplicados */}
           <div
             onClick={() => onNavigate('requests')}
             className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs hover:border-emerald-400 cursor-pointer transition group"
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">Ausencias Médicas</span>
+              <span className="text-xs font-semibold text-slate-500">Intercambios Aprobados</span>
               <div className="p-2 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 rounded-xl group-hover:scale-110 transition">
-                <HeartPulse className="w-4 h-4" />
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl font-black text-emerald-600 mt-2">
+              {approvedShiftChanges}
+            </div>
+            <span className="text-[11px] text-slate-400 font-medium">aplicados al cuadrante</span>
+          </div>
+
+          {/* 4. Empleados en plantilla */}
+          <div
+            onClick={() => onNavigate('employees')}
+            className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs hover:border-purple-400 cursor-pointer transition group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500">Plantilla Activa</span>
+              <div className="p-2 bg-purple-50 dark:bg-purple-950/60 text-purple-600 rounded-xl group-hover:scale-110 transition">
+                <Users className="w-4 h-4" />
               </div>
             </div>
             <div className="text-2xl font-black text-slate-900 dark:text-white mt-2">
-              {totalAbsences}
+              {activeEmployeesCount}
             </div>
-            <span className="text-[11px] text-slate-400 font-medium">comunicadas en el sistema</span>
-          </div>
-
-          {/* 4. Incidencias abiertas */}
-          <div
-            onClick={() => onNavigate('requests')}
-            className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs hover:border-rose-400 cursor-pointer transition group"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">Incidencias Abiertas</span>
-              <div className="p-2 bg-rose-50 dark:bg-rose-950/60 text-rose-600 rounded-xl group-hover:scale-110 transition">
-                <AlertOctagon className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-2xl font-black text-rose-600 mt-2">
-              {openIncidents}
-            </div>
-            <span className="text-[11px] text-slate-400 font-medium">requieren atención</span>
+            <span className="text-[11px] text-slate-400 font-medium">roles configurados</span>
           </div>
         </div>
       </div>

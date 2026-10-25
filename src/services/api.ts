@@ -633,6 +633,9 @@ export const api = {
     proposedShift: string;
     coworkerId?: string;
     comments?: string;
+    swapKind?: 'shift' | 'day_off';
+    targetDate?: string;
+    coworkerCurrentShift?: string;
   }): Promise<ShiftChangeRequest> {
     return request<ShiftChangeRequest>('/api/requests/shift-change', {
       method: 'POST',

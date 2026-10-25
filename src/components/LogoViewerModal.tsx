@@ -250,7 +250,7 @@ export const LogoViewerModal: React.FC<LogoViewerModalProps> = ({ isOpen, onClos
         <div className="w-full pt-4 border-t border-slate-100 dark:border-slate-800/80 space-y-1.5 text-center">
           <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
             <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-            <span>{APP_BRAND.copyrightText}</span>
+            <span>© {new Date().getFullYear()} {APP_BRAND.copyrightText}</span>
           </div>
           <p className="text-[11px] text-slate-400 dark:text-slate-500">
             {APP_BRAND.name} • {APP_BRAND.subtitle}
