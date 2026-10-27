@@ -20,11 +20,12 @@ import { Shield, Clock, HelpCircle, Heart } from 'lucide-react';
 import { APP_BRAND } from './constants/branding';
 import { LogoModalProvider } from './context/LogoModalContext';
 import { InteractiveLogo } from './components/InteractiveLogo';
+import { INITIAL_EMPLOYEES } from './constants/initialData';
 
 function AppContent() {
   const { user, loading, refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState<string>('dashboard');
-  const [employees, setEmployees] = useState<User[]>([]);
+  const [employees, setEmployees] = useState<User[]>(INITIAL_EMPLOYEES);
   const [showSettings, setShowSettings] = useState(false);
   const [showTests, setShowTests] = useState(false);
 

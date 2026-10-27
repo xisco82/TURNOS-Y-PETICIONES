@@ -11,6 +11,7 @@ export interface User {
   tempPassword?: string;
   mustChangePassword?: boolean;
   registeredAt?: string;
+  lastPasswordResetAt?: string;
   createdAt: string;
   updatedAt?: string;
 }
@@ -50,6 +51,7 @@ export interface WeekSchedule {
   changeReason?: string;
   rows: EmployeeScheduleRow[];
   rawInputText?: string;
+  colorOverrides?: Record<string, string>;
   createdAt: string;
   updatedAt: string;
 }
@@ -84,11 +86,15 @@ export interface ShiftChangeRequest {
   employeeId: string;
   employeeName: string;
   type: 'shift_change';
+  swapKind?: 'shift' | 'day_off';
   date: string;
+  targetDate?: string;
   currentShift: string;
   proposedShift: string;
   coworkerId?: string;
   coworkerName?: string;
+  coworkerPhone?: string;
+  coworkerCurrentShift?: string;
   coworkerStatus?: 'pending' | 'accepted' | 'rejected';
   status: 'pending' | 'approved' | 'rejected' | 'info_requested';
   comments: RequestComment[];
