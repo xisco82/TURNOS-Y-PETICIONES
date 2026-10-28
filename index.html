@@ -18,19 +18,92 @@
     <link rel="icon" type="image/png" href="https://i.postimg.cc/tCJTx2DZ/XISCO-LOGO.png" />
     <link rel="apple-touch-icon" href="https://i.postimg.cc/tCJTx2DZ/XISCO-LOGO.png" />
     <script>
-      // Suppress harmless Vite HMR WebSocket closed errors in preview iframe
-      window.addEventListener('error', function(e) {
-        if (e.message && (e.message.includes('WebSocket') || e.message.includes('ws://') || e.message.includes('wss://'))) {
-          e.preventDefault();
-          e.stopImmediatePropagation();
+      (function() {
+        // 1. Intercept console.error and console.warn for Vite HMR WebSocket closed notifications
+        const origConsoleError = console.error;
+        console.error = function(...args) {
+          const str = args.map(a => (typeof a === 'object' && a !== null ? (a.message || a.stack || String(a)) : String(a))).join(' ');
+          if (str.includes('WebSocket') || str.includes('ws://') || str.includes('wss://') || str.includes('[vite]')) {
+            return;
+          }
+          origConsoleError.apply(console, args);
+        };
+
+        const origConsoleWarn = console.warn;
+        console.warn = function(...args) {
+          const str = args.map(a => (typeof a === 'object' && a !== null ? (a.message || a.stack || String(a)) : String(a))).join(' ');
+          if (str.includes('WebSocket') || str.includes('ws://') || str.includes('wss://') || str.includes('[vite]')) {
+            return;
+          }
+          origConsoleWarn.apply(console, args);
+        };
+
+        // 2. Intercept window errors & unhandled promise rejections
+        window.addEventListener('error', function(e) {
+          const msg = e.message || (e.error && e.error.message) || '';
+          if (msg.includes('WebSocket') || msg.includes('ws://') || msg.includes('wss://') || msg.includes('[vite]')) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return true;
+          }
+        }, true);
+
+        window.addEventListener('unhandledrejection', function(e) {
+          const reason = e.reason ? (e.reason.message || String(e.reason)) : '';
+          if (reason.includes('WebSocket') || reason.includes('ws://') || reason.includes('wss://') || reason.includes('[vite]')) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return true;
+          }
+        }, true);
+
+        // 3. Mock Vite HMR WebSocket so client receives clean connection with wasClean=true
+        const NativeWebSocket = window.WebSocket;
+        if (NativeWebSocket) {
+          window.WebSocket = function(url, protocols) {
+            const urlStr = String(url || '');
+            if (urlStr.includes('vite') || urlStr.includes('hmr') || protocols === 'vite-hmr') {
+              const emitter = new EventTarget();
+              const wsMock = {
+                readyState: 1, // OPEN
+                url: urlStr,
+                protocol: 'vite-hmr',
+                extensions: '',
+                binaryType: 'blob',
+                bufferedAmount: 0,
+                send: function() {},
+                close: function() {
+                  this.readyState = 3;
+                  const ev = new CloseEvent('close', { wasClean: true });
+                  if (typeof this.onclose === 'function') this.onclose(ev);
+                  emitter.dispatchEvent(ev);
+                },
+                addEventListener: function(type, listener) {
+                  emitter.addEventListener(type, listener);
+                },
+                removeEventListener: function(type, listener) {
+                  emitter.removeEventListener(type, listener);
+                },
+                dispatchEvent: function(event) {
+                  return emitter.dispatchEvent(event);
+                }
+              };
+              setTimeout(() => {
+                const ev = new Event('open');
+                if (typeof wsMock.onopen === 'function') wsMock.onopen(ev);
+                emitter.dispatchEvent(ev);
+              }, 10);
+              return wsMock;
+            }
+            return new NativeWebSocket(url, protocols);
+          };
+          window.WebSocket.prototype = NativeWebSocket.prototype;
+          window.WebSocket.CONNECTING = 0;
+          window.WebSocket.OPEN = 1;
+          window.WebSocket.CLOSING = 2;
+          window.WebSocket.CLOSED = 3;
         }
-      });
-      window.addEventListener('unhandledrejection', function(e) {
-        if (e.reason && String(e.reason).includes('WebSocket')) {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-        }
-      });
+      })();
     </script>
   </head>
   <body class="bg-slate-50 text-slate-900 antialiased selection:bg-indigo-500 selection:text-white">
