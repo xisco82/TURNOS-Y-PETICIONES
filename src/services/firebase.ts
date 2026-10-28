@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
 import rawConfig from '../../firebase-applet-config.json';
 import { User, WeekSchedule, AppSettings } from '../types';
 
@@ -234,3 +234,30 @@ export async function syncDatabaseToFirestore(data: {
     throw err;
   }
 }
+
+export async function saveScheduleToFirestore(schedule: any): Promise<boolean> {
+  if (!schedule || !schedule.id) return false;
+  try {
+    await setDoc(doc(db, 'schedules', schedule.id), {
+      ...schedule,
+      updatedAt: new Date().toISOString(),
+    }, { merge: true });
+    return true;
+  } catch (err: any) {
+    console.warn(`Error writing schedule ${schedule.id} to Firestore:`, err.message);
+    return false;
+  }
+}
+
+export async function getSchedulesFromFirestore(): Promise<any[]> {
+  try {
+    const snap = await getDocs(collection(db, 'schedules'));
+    if (!snap.empty) {
+      return snap.docs.map(d => d.data());
+    }
+  } catch (err: any) {
+    console.warn('Error reading schedules from Firestore:', err.message);
+  }
+  return [];
+}
+

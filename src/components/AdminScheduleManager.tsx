@@ -29,8 +29,15 @@ interface Props {
 }
 
 export const AdminScheduleManager: React.FC<Props> = ({ employees, onSchedulePublished, onRefreshEmployees }) => {
-  const [inputText, setInputText] = useState(OFFICIAL_SCHEDULE_TEXT);
-  const [targetWeekDate, setTargetWeekDate] = useState('2026-11-02');
+  const [inputText, setInputText] = useState('');
+  const [targetWeekDate, setTargetWeekDate] = useState(() => {
+    // Current Monday date
+    const d = new Date();
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(d.setDate(diff));
+    return monday.toISOString().split('T')[0];
+  });
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
   const [existingSchedules, setExistingSchedules] = useState<WeekSchedule[]>([]);
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null);
@@ -58,23 +65,6 @@ export const AdminScheduleManager: React.FC<Props> = ({ employees, onSchedulePub
   useEffect(() => {
     fetchExistingSchedules();
   }, []);
-
-  // Automatically parse official schedule when employees list is loaded
-  useEffect(() => {
-    if (employees && employees.length > 1 && !parseResult) {
-      const res = parseScheduleInput(inputText || OFFICIAL_SCHEDULE_TEXT, employees, targetWeekDate);
-      setParseResult(res);
-    } else if (!employees || employees.length <= 1) {
-      // Auto-fetch employees from database (Firestore / API) if not provided yet
-      api.getUsers().then(list => {
-        if (list && list.length > 1) {
-          onRefreshEmployees?.();
-          const res = parseScheduleInput(inputText || OFFICIAL_SCHEDULE_TEXT, list, targetWeekDate);
-          setParseResult(res);
-        }
-      });
-    }
-  }, [employees, inputText, targetWeekDate, parseResult]);
 
   const handlePreview = async () => {
     if (!inputText.trim()) {

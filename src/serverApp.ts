@@ -266,7 +266,7 @@ export const OFFICIAL_EMPLOYEES: User[] = [
 function getInitialDatabase(): DatabaseSchema {
   return {
     users: [ADMIN_USER, ...OFFICIAL_EMPLOYEES],
-    schedules: [OFFICIAL_WEEK_SCHEDULE as WeekSchedule],
+    schedules: [],
     shiftRequests: [],
     daysOffRequests: [],
     absenceRequests: [],
@@ -373,10 +373,6 @@ function loadDatabase() {
       }
 
       if (!db.schedules) db.schedules = [];
-      const hasOfficialSched = db.schedules.some(s => s.weekStartDate === '2026-11-02');
-      if (!hasOfficialSched) {
-        db.schedules.unshift(OFFICIAL_WEEK_SCHEDULE as WeekSchedule);
-      }
       if (!db.shiftRequests) db.shiftRequests = [];
       if (!db.daysOffRequests) db.daysOffRequests = [];
       if (!db.absenceRequests) db.absenceRequests = [];

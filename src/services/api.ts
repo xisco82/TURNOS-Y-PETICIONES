@@ -322,7 +322,13 @@ class ApiService {
 
   async saveDraft(data: Partial<WeekSchedule>): Promise<WeekSchedule> {
     try {
-      return await firestoreSaveSchedule({ ...data, isPublish: false });
+      const saved = await firestoreSaveSchedule({ ...data, isPublish: false });
+      fetch('/api/schedules/draft', {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(data),
+      }).catch(() => {});
+      return saved;
     } catch {
       const res = await fetch('/api/schedules/draft', {
         method: 'POST',
@@ -344,7 +350,13 @@ class ApiService {
     colorOverrides?: any;
   }): Promise<WeekSchedule> {
     try {
-      return await firestoreSaveSchedule({ ...data, isPublish: true });
+      const saved = await firestoreSaveSchedule({ ...data, isPublish: true });
+      fetch('/api/schedules/publish', {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(data),
+      }).catch(() => {});
+      return saved;
     } catch {
       const res = await fetch('/api/schedules/publish', {
         method: 'POST',
